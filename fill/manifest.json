@@ -1,0 +1,23 @@
+{
+    "name": "fill",
+    "short_name": "fill",
+    "icons": [
+        {
+            "src": "../_images/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "../_images/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ],
+    "theme_color": "#EEEEEE",
+    "background_color": "#EEEEEE",
+    "display": "standalone",
+    "start_url": "/fill/",
+    "orientation": "portrait"
+}
