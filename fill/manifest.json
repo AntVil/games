@@ -18,6 +18,6 @@
     "theme_color": "#EEEEEE",
     "background_color": "#EEEEEE",
     "display": "standalone",
-    "start_url": "/fill/",
+    "start_url": "/games/fill/",
     "orientation": "portrait"
 }
