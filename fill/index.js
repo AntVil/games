@@ -237,24 +237,35 @@ class Path{
         ctxt.lineWidth = Math.round(TILE_SIZE * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)));
         if(this.isSolution){
             ctxt.strokeStyle = "#09FA";
+            ctxt.fillStyle = "#09FA";
         }else{
             ctxt.strokeStyle = "#09F";
+            ctxt.fillStyle = "#09F";
         }
         
-        ctxt.setLineDash([]);
-        ctxt.beginPath();
-        ctxt.lineCap = "square";
-        ctxt.moveTo(
-            Math.round(TILE_SIZE * (positions[0][0] + 0.5)),
-            Math.round(TILE_SIZE * (positions[0][1] + 0.5))
-        );
-        for(let i=0;i<positions.length;i++){
-            ctxt.lineTo(
-                Math.round(TILE_SIZE * (positions[i][0] + 0.5)),
-                Math.round(TILE_SIZE * (positions[i][1] + 0.5))
+        if(positions.length === 1){
+            ctxt.fillRect(
+                TILE_SIZE * (positions[0][0] + TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR),
+                TILE_SIZE * (positions[0][1] + TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR),
+                TILE_SIZE * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)),
+                TILE_SIZE * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR))
             );
+        }else{
+            ctxt.setLineDash([]);
+            ctxt.beginPath();
+            ctxt.lineCap = "square";
+            ctxt.moveTo(
+                Math.round(TILE_SIZE * (positions[0][0] + 0.5)),
+                Math.round(TILE_SIZE * (positions[0][1] + 0.5))
+            );
+            for(let i=0;i<positions.length;i++){
+                ctxt.lineTo(
+                    Math.round(TILE_SIZE * (positions[i][0] + 0.5)),
+                    Math.round(TILE_SIZE * (positions[i][1] + 0.5))
+                );
+            }
+            ctxt.stroke();
         }
-        ctxt.stroke();
 
         if(!this.isSolution){
             ctxt.lineWidth = 1;
