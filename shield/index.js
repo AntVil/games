@@ -185,7 +185,7 @@ class Game{
     }
 
     handleInput(angle){
-        this.arc.setGoalRotation(angle - Math.PI);
+        this.arc.setGoalRotation(angle);
     }
 }
 
