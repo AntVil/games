@@ -234,76 +234,44 @@ class Path{
             positions = this.positions;
         }
 
-        ctxt.fillStyle = "#09F";
-        ctxt.fillRect(
-            Math.round(TILE_SIZE * (positions[0][0] + TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)),
-            Math.round(TILE_SIZE * (positions[0][1] + TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)),
-            Math.round(TILE_SIZE * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR))),
-            Math.round(TILE_SIZE * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)))
-        );
+        ctxt.lineWidth = Math.round(TILE_SIZE * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)));
+        if(this.isSolution){
+            ctxt.strokeStyle = "#09FA";
+        }else{
+            ctxt.strokeStyle = "#09F";
+        }
         
-        if(positions.length > 1){
-            ctxt.lineWidth = Math.round(TILE_SIZE * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)));
-            if(this.isSolution){
-                ctxt.strokeStyle = "#09FA";
-            }else{
-                ctxt.strokeStyle = "#09F";
-            }
-            
-            ctxt.setLineDash([]);
+        ctxt.setLineDash([]);
+        ctxt.beginPath();
+        ctxt.lineCap = "square";
+        ctxt.moveTo(
+            Math.round(TILE_SIZE * (positions[0][0] + 0.5)),
+            Math.round(TILE_SIZE * (positions[0][1] + 0.5))
+        );
+        for(let i=0;i<positions.length;i++){
+            ctxt.lineTo(
+                Math.round(TILE_SIZE * (positions[i][0] + 0.5)),
+                Math.round(TILE_SIZE * (positions[i][1] + 0.5))
+            );
+        }
+        ctxt.stroke();
+
+        if(!this.isSolution){
+            ctxt.lineWidth = 1;
+            ctxt.strokeStyle = "#FFF";
+            ctxt.setLineDash([5, 5]);
             ctxt.beginPath();
             ctxt.moveTo(
                 Math.round(TILE_SIZE * (positions[0][0] + 0.5)),
                 Math.round(TILE_SIZE * (positions[0][1] + 0.5))
             );
-            for(let i=1;i<positions.length-1;i++){
+            for(let i=1;i<positions.length;i++){
                 ctxt.lineTo(
                     Math.round(TILE_SIZE * (positions[i][0] + 0.5)),
                     Math.round(TILE_SIZE * (positions[i][1] + 0.5))
                 );
             }
-            let preLast = positions[positions.length - 2];
-            let last = positions[positions.length - 1];
-            if(preLast[0] < last[0]){
-                ctxt.lineTo(
-                    Math.round(TILE_SIZE * (last[0] + 1 - TILE_PADDING_FACTOR - TILE_PATH_PADDING_FACTOR)),
-                    Math.round(TILE_SIZE * (last[1] + 0.5))
-                );
-            }else if(preLast[0] > last[0]){
-                ctxt.lineTo(
-                    Math.round(TILE_SIZE * (last[0] + TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)),
-                    Math.round(TILE_SIZE * (last[1] + 0.5))
-                );
-            }else if(preLast[1] < last[1]){
-                ctxt.lineTo(
-                    Math.round(TILE_SIZE * (last[0] + 0.5)),
-                    Math.round(TILE_SIZE * (last[1] + 1 - TILE_PADDING_FACTOR - TILE_PATH_PADDING_FACTOR))
-                );
-            }else{
-                ctxt.lineTo(
-                    Math.round(TILE_SIZE * (last[0] + 0.5)),
-                    Math.round(TILE_SIZE * (last[1] + TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR))
-                );
-            }
             ctxt.stroke();
-
-            if(!this.isSolution){
-                ctxt.lineWidth = 1;
-                ctxt.strokeStyle = "#FFF";
-                ctxt.setLineDash([5, 5]);
-                ctxt.beginPath();
-                ctxt.moveTo(
-                    Math.round(TILE_SIZE * (positions[0][0] + 0.5)),
-                    Math.round(TILE_SIZE * (positions[0][1] + 0.5))
-                );
-                for(let i=1;i<positions.length;i++){
-                    ctxt.lineTo(
-                        Math.round(TILE_SIZE * (positions[i][0] + 0.5)),
-                        Math.round(TILE_SIZE * (positions[i][1] + 0.5))
-                    );
-                }
-                ctxt.stroke();
-            }
         }
     }
 
