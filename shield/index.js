@@ -53,14 +53,14 @@ window.onload = () => {
 
     gameOver = document.getElementById("gameOver");
 
+    audio = new AudioHandler();
+
     game = new Game();
 
     canvas.addEventListener("mousedown", (e) => {
         e.preventDefault();
 
-        if(audio === undefined){
-            audio = new AudioHandler();
-        }
+        audio.context.resume();
 
         mouseDown = true;
         
@@ -96,9 +96,7 @@ window.onload = () => {
     canvas.addEventListener("touchstart", (e) => {
         e.preventDefault();
 
-        if(audio === undefined){
-            audio = new AudioHandler();
-        }
+        audio.context.resume();
 
         let angle = Math.atan2(
             e.touches[0].clientY - canvas.height / 2,
@@ -201,7 +199,8 @@ class Game{
             LinearParticle,
             ZigzagParticle,
             SpiralParticle,
-            ReverseSpiralParticle
+            ReverseSpiralParticle,
+            FastParticle
         ];
         this.reset();
     }
@@ -502,5 +501,33 @@ class ReverseSpiralParticle{
         if(this.angle < 0){
             this.angle += 2 * Math.PI;
         }
+    }
+}
+
+class FastParticle{
+    constructor(){
+        this.x = 0.5;
+        this.y = 0.5;
+        this.angle = 2 * Math.PI * Math.random();
+        this.distance = PARTICLE_START_DISTANCE;
+        this.startTime = Date.now();
+    }
+
+    render(ctxt){
+        let x = this.x * canvas.width + this.distance * gameSize * Math.cos(this.angle);
+        let y = this.y * canvas.height + this.distance * gameSize * Math.sin(this.angle);
+        let r = PARTICLE_SIZE * gameSize;
+        let t = (Date.now() - this.startTime)/ 200;
+        ctxt.fillStyle = "#F00";
+        ctxt.beginPath();
+        ctxt.moveTo(x + r * Math.cos(t), y + r * Math.sin(t));
+        for(let i=1;i<4;i++){
+            ctxt.lineTo(x + r * Math.cos(t + Math.PI * 2 * i / 4), y + r * Math.sin(t + Math.PI * 2 * i / 4));
+        }
+        ctxt.fill();
+    }
+
+    update(){
+        this.distance -= PARTICLE_SPEED * 1.1;
     }
 }
