@@ -6,17 +6,23 @@ let filesToCache = [
     "/games/fill/index.css"
 ];
 
-self.addEventListener('install', (event) => {
+self.addEventListener("install", (event) => {
     event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(filesToCache)));
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", (event) => {
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-            return cachedResponse;
-        }
-        return fetch(event.request);
-        }),
+        fetch(event.request).then((response) => {
+            let copy = response.clone();
+            caches.open(cacheName)
+            .then((cache) => {
+                cache.put(event.request, copy);
+            });
+            return response;
+        }).catch(() => {
+            return caches.match(event.request).then((response) => {
+                return response;
+            })
+        })
     );
 });
