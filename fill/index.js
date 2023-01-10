@@ -13,6 +13,8 @@ const TILE_SIZE = CANVAS_RESOLUTION / MAP_SIZE;
 let canvas;
 let ctxt;
 
+let audio;
+
 let mouseDown = false;
 
 let map;
@@ -40,6 +42,11 @@ window.onload = () => {
 
     canvas.addEventListener("mousedown", (e) => {
         e.preventDefault();
+
+        if(audio === undefined){
+            audio = new AudioHandler();
+        }
+
         mouseDown = true;
         
         let rect = canvas.getBoundingClientRect();
@@ -72,6 +79,10 @@ window.onload = () => {
     canvas.addEventListener("touchstart", (e) => {
         e.preventDefault();
 
+        if(audio === undefined){
+            audio = new AudioHandler();
+        }
+
         let rect = canvas.getBoundingClientRect();
         let x = Math.floor(((e.touches[0].clientX - rect.left) / rect.width) * MAP_SIZE);
         let y = Math.floor(((e.touches[0].clientY - rect.top) / rect.height) * MAP_SIZE);
@@ -90,7 +101,7 @@ window.onload = () => {
     });
 
     map = new Map();
-    
+
     map.generate();
 
     loop();
@@ -102,6 +113,29 @@ function loop(){
     map.render(ctxt);
 
     requestAnimationFrame(loop);
+}
+
+class AudioHandler{
+    constructor(){
+        this.context = new AudioContext();
+    }
+
+    play(frequency){
+        let volume = this.context.createGain();
+        let oscillator = this.context.createOscillator();
+
+        oscillator.type = "sine";
+        volume.connect(this.context.destination);
+        oscillator.connect(volume);
+
+        let endTime = this.context.currentTime + 0.1;
+        volume.gain.setValueAtTime(1, this.context.currentTime);
+        volume.gain.linearRampToValueAtTime(0, endTime);
+        oscillator.frequency.setValueAtTime(frequency, this.context.currentTime);
+
+        oscillator.start();
+        oscillator.stop(endTime);
+    }
 }
 
 class Map{
@@ -164,14 +198,18 @@ class Map{
     }
 
     render(ctxt){
-        for(let i=0;i<MAP_SIZE;i++){
-            for(let j=0;j<MAP_SIZE;j++){
-                this.grid[i][j].render(ctxt);
+        try{
+            for(let i=0;i<MAP_SIZE;i++){
+                for(let j=0;j<MAP_SIZE;j++){
+                    this.grid[i][j].render(ctxt);
+                }
             }
-        }
 
-        this.solutionPath.render(ctxt, this.hintBlocks);
-        this.path.render(ctxt);
+            this.solutionPath.render(ctxt, this.hintBlocks);
+            this.path.render(ctxt);
+        }catch{
+
+        }
     }
 
     handleInput(position){
@@ -182,8 +220,10 @@ class Map{
         let index = this.path.indexOf(position)
         if(index !== -1){
             this.path.truncate(index);
+            this.path.playAudio(audio);
         }else if(this.grid[position[1]][position[0]].active && this.path.manhattanDistance(position) === 1){
             this.path.push(position);
+            this.path.playAudio(audio);
 
             if(this.completed()){
                 document.getElementById("mapCompleted").checked = true;
@@ -291,7 +331,7 @@ class Path{
     }
 
     indexOf(position){
-        for(let i=0;i<this.positions.length;i++){
+        for(let i=0;i<this.positions.length-1;i++){
             if(this.positions[i][0] == position[0] && this.positions[i][1] == position[1]){
                 return i;
             }
@@ -310,5 +350,9 @@ class Path{
 
     count(){
         return this.positions.length;
+    }
+
+    playAudio(audio){
+        audio.play(440 * Math.pow(1.059463094359, this.positions.length - 24));
     }
 }

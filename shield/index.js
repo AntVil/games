@@ -18,6 +18,8 @@ const PARTICLE_SPAWN_FRAME_COUNTER_CAP = 200;
 let canvas;
 let ctxt;
 
+let audio;
+
 let gameOver;
 
 let mouseDown = false;
@@ -55,6 +57,11 @@ window.onload = () => {
 
     canvas.addEventListener("mousedown", (e) => {
         e.preventDefault();
+
+        if(audio === undefined){
+            audio = new AudioHandler();
+        }
+
         mouseDown = true;
         
         let angle = Math.atan2(
@@ -88,6 +95,10 @@ window.onload = () => {
 
     canvas.addEventListener("touchstart", (e) => {
         e.preventDefault();
+
+        if(audio === undefined){
+            audio = new AudioHandler();
+        }
 
         let angle = Math.atan2(
             e.touches[0].clientY - canvas.height / 2,
@@ -124,6 +135,66 @@ function updateLoop(){
     game.update();
 }
 
+class AudioHandler{
+    constructor(){
+        this.context = new AudioContext();
+    }
+
+    playPowerup(){
+        let endTime = this.context.currentTime + 0.15;
+
+        let volume = this.context.createGain();
+        volume.connect(this.context.destination);
+        volume.gain.setValueAtTime(1, this.context.currentTime);
+        volume.gain.linearRampToValueAtTime(0, endTime);
+
+        let oscillator = this.context.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(293.66, this.context.currentTime);
+        oscillator.frequency.setValueAtTime(329.63, this.context.currentTime + 0.1);
+        oscillator.connect(volume);
+
+        oscillator.start();
+        oscillator.stop(endTime);
+    }
+
+    playGeneric(){
+        let endTime = this.context.currentTime + 0.1;
+
+        let volume = this.context.createGain();
+        volume.connect(this.context.destination);
+        volume.gain.setValueAtTime(1, this.context.currentTime);
+        volume.gain.linearRampToValueAtTime(0, endTime);
+
+        let oscillator = this.context.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(220, this.context.currentTime);
+        oscillator.connect(volume);
+
+        oscillator.start();
+        oscillator.stop(endTime);
+    }
+
+    playLost(){
+        let endTime = this.context.currentTime + 0.3;
+
+        let volume = this.context.createGain();
+        volume.connect(this.context.destination);
+        volume.gain.setValueAtTime(1, this.context.currentTime);
+        volume.gain.linearRampToValueAtTime(0, endTime);
+
+        let oscillator = this.context.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(329.63, this.context.currentTime);
+        oscillator.frequency.setValueAtTime(293.66, this.context.currentTime + 0.1);
+        oscillator.frequency.setValueAtTime(261.63, this.context.currentTime + 0.2);
+        oscillator.connect(volume);
+
+        oscillator.start();
+        oscillator.stop(endTime);
+    }
+}
+
 class Game{
     constructor(){
         this.particleTypes = [
@@ -153,12 +224,15 @@ class Game{
                 if(this.arc.intercepts(this.particles[i])){
                     this.particles.splice(i, 1);
                     this.arc.shrink();
+                    audio.playGeneric();
                 }else if(this.core.intercepts(this.particles[i])){
                     if(this.particles[i] instanceof LinearParticle){
                         this.core.score++;
                         this.arc.grow();
+                        audio.playPowerup();
                     }else{
                         gameOver.checked = true;
+                        audio.playLost();
                     }
 
                     this.particles.splice(i, 1);
