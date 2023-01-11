@@ -5,15 +5,15 @@ const ARC_SIZE_ANGLE_GROW_SIZE = Math.PI / 5;
 const ARC_SIZE_ANGLE_SHRINK_FACTOR = 0.9;
 const ARC_DISTANCE = 0.25;
 const ARC_WIDTH = 0.015;
-const ARC_MAX_ANGLE_CHANGE = Math.PI / 50;
+const ARC_MAX_ANGLE_CHANGE = Math.PI / 12;
 const CORE_SIZE = 0.15;
 const PARTICLE_START_DISTANCE = 1.5;
 const PARTICLE_SIZE = 0.02;
-const PARTICLE_SPEED = 0.001;
+const PARTICLE_SPEED = 0.003;
 const PARTICLE_ZIGZAG_AMPLITUDE = 0.1;
 const PARTICLE_ZIGZAG_FREQUENCY = 50;
 const PARTICLE_SPIRAL_ANGLE = 0.005;
-const PARTICLE_SPAWN_FRAME_COUNTER_CAP = 200;
+const PARTICLE_SPAWN_FRAME_COUNTER_CAP = 80;
 
 let canvas;
 let ctxt;
@@ -117,7 +117,7 @@ window.onload = () => {
         game.handleInput(angle);
     });
 
-    setInterval(updateLoop, FPS / 1000);
+    setInterval(updateLoop, 1000 / FPS);
     renderLoop();
 }
 
