@@ -1,4 +1,4 @@
-const FPS = 60;
+const FPS = 80;
 
 const ARC_START_SIZE_ANGLE = Math.PI * 3 / 2;
 const ARC_SIZE_ANGLE_GROW_SIZE = Math.PI / 5;
@@ -6,7 +6,7 @@ const ARC_SIZE_ANGLE_SHRINK_FACTOR = 0.9;
 const ARC_DISTANCE = 0.25;
 const ARC_WIDTH = 0.015;
 const ARC_MAX_ANGLE_CHANGE = Math.PI / 12;
-const CORE_SIZE = 0.15;
+const CORE_SIZE = 0.2;
 const PARTICLE_START_DISTANCE = 1.5;
 const PARTICLE_SIZE = 0.02;
 const PARTICLE_SPEED = 0.003;
