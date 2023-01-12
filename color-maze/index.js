@@ -10,7 +10,7 @@ const CANVAS_RESOLUTION = 1024;
 const SHADOW_LENGTH = CANVAS_RESOLUTION * 0.005;
 const HIGHLIGHT_LENGTH = CANVAS_RESOLUTION * 0;
 const WALL_LENGTH_X = CANVAS_RESOLUTION * 0.02;
-const WALL_LENGTH_Y = CANVAS_RESOLUTION * 0.01;
+const WALL_LENGTH_Y = CANVAS_RESOLUTION * 0.02;
 
 const MAP_GAP_COLOR = "#000";
 const TILE_COLOR = "#222";
@@ -323,16 +323,22 @@ class Map{
 
         this.ball.render(ctxt);
 
+        // draw walls from outward to inward
         for(let i=0;i<MAP_SIZE;i++){
-            for(let j=0;j<MAP_SIZE;j++){
+            for(let j=0;j<MAP_SIZE/2;j++){
+                if(!this.grid[i][j].active){
+                    this.grid[i][j].render(ctxt);
+                }
+            }
+            for(let j=MAP_SIZE-1;j>=MAP_SIZE/2;j--){
                 if(!this.grid[i][j].active){
                     this.grid[i][j].render(ctxt);
                 }
             }
         }
 
+        // hide wall of lowest row
         ctxt.fillStyle = MAP_COLOR;
-        ctxt.fillRect(CANVAS_RESOLUTION - WALL_LENGTH_X, 0, WALL_LENGTH_X, CANVAS_RESOLUTION);
         ctxt.fillRect(0, CANVAS_RESOLUTION - WALL_LENGTH_Y, CANVAS_RESOLUTION, WALL_LENGTH_Y);
     }
 
@@ -344,13 +350,13 @@ class Map{
         if(this.ball.dx > 0){
             x = Math.round(this.ball.x + BALL_SIZE_FACTOR);
             y = Math.round(this.ball.y);
-        }else if(this.ball.dx < 0){ // works
+        }else if(this.ball.dx < 0){
             x = Math.round(this.ball.x - BALL_SIZE_FACTOR);
             y = Math.round(this.ball.y);
         }else if(this.ball.dy > 0){
             x = Math.round(this.ball.x);
             y = Math.round(this.ball.y + BALL_SIZE_FACTOR);
-        }else if(this.ball.dy < 0){ // works
+        }else if(this.ball.dy < 0){
             x = Math.round(this.ball.x);
             y = Math.round(this.ball.y - BALL_SIZE_FACTOR);
         }
@@ -408,31 +414,32 @@ class MapTile{
                 TILE_SIZE * (1 - 2 * TILE_PADDING_FACTOR),
                 TILE_SIZE * (1 - 2 * TILE_PADDING_FACTOR)
             );
-        }else if(this.y !== MAP_SIZE-1){
+        }else{
+            let wallX = WALL_LENGTH_X * (this.x - MAP_SIZE/2) / MAP_SIZE
             
-
-
             ctxt.fillStyle = WALL_COLOR;
             ctxt.beginPath();
-            ctxt.moveTo(TILE_SIZE * (this.x + 1), TILE_SIZE * this.y);
-            ctxt.lineTo(TILE_SIZE * (this.x + 1), TILE_SIZE * (this.y + 1));
-            ctxt.lineTo(TILE_SIZE * this.x, TILE_SIZE * (this.y + 1));
-            ctxt.lineTo(TILE_SIZE * this.x - WALL_LENGTH_X, TILE_SIZE * (this.y + 1) - WALL_LENGTH_Y);
-            ctxt.lineTo(TILE_SIZE * (this.x + 1) - WALL_LENGTH_X, TILE_SIZE * (this.y + 1) - WALL_LENGTH_Y);
-            ctxt.lineTo(TILE_SIZE * (this.x + 1) - WALL_LENGTH_X, TILE_SIZE * this.y - WALL_LENGTH_Y);
+            if(wallX < 0){
+                ctxt.moveTo(TILE_SIZE * (this.x + 1), TILE_SIZE * this.y);
+                ctxt.lineTo(TILE_SIZE * (this.x + 1), TILE_SIZE * (this.y + 1));
+                ctxt.lineTo(TILE_SIZE * this.x, TILE_SIZE * (this.y + 1));
+                ctxt.lineTo(TILE_SIZE * this.x + wallX, TILE_SIZE * (this.y + 1) - WALL_LENGTH_Y);
+                ctxt.lineTo(TILE_SIZE * (this.x + 1) + wallX, TILE_SIZE * (this.y + 1) - WALL_LENGTH_Y);
+                ctxt.lineTo(TILE_SIZE * (this.x + 1) + wallX, TILE_SIZE * this.y - WALL_LENGTH_Y);
+            }else{
+                ctxt.moveTo(TILE_SIZE * this.x, TILE_SIZE * this.y);
+                ctxt.lineTo(TILE_SIZE * this.x, TILE_SIZE * (this.y + 1));
+                ctxt.lineTo(TILE_SIZE * (this.x + 1), TILE_SIZE * (this.y + 1));
+                ctxt.lineTo(TILE_SIZE * (this.x + 1) + wallX, TILE_SIZE * (this.y + 1) - WALL_LENGTH_Y);
+                ctxt.lineTo(TILE_SIZE * this.x + wallX, TILE_SIZE * (this.y + 1) - WALL_LENGTH_Y);
+                ctxt.lineTo(TILE_SIZE * this.x + wallX, TILE_SIZE * this.y - WALL_LENGTH_Y);
+            }
             ctxt.fill();
-
+            
+            
             ctxt.fillStyle = MAP_COLOR;
             ctxt.fillRect(
-                TILE_SIZE * this.x - WALL_LENGTH_X - 1,
-                TILE_SIZE * this.y - WALL_LENGTH_Y - 1,
-                TILE_SIZE + 2,
-                TILE_SIZE + 2
-            );
-        }else{
-            ctxt.fillStyle = MAP_COLOR;
-            ctxt.fillRect(
-                TILE_SIZE * this.x - WALL_LENGTH_X - 1,
+                TILE_SIZE * this.x + wallX - 1,
                 TILE_SIZE * this.y - WALL_LENGTH_Y - 1,
                 TILE_SIZE + 2,
                 TILE_SIZE + 2
@@ -460,6 +467,7 @@ class Ball{
     }
 
     render(ctxt){
+        // trail
         ctxt.fillStyle = "#09F";
         for(let i=0;i<this.history.length;i++){
             ctxt.beginPath();
@@ -492,6 +500,59 @@ class Ball{
         ctxt.shadowOffsetY = 0;
         ctxt.shadowBlur = 0;
         ctxt.shadowColor = "";
+
+        // bottom shadow
+        ctxt.fillStyle = "#0006"
+        ctxt.beginPath();
+        ctxt.arc(
+            TILE_SIZE * (this.x + 0.5),
+            TILE_SIZE * (this.y + 0.5),
+            TILE_SIZE * BALL_SIZE_FACTOR,
+            0,
+            Math.PI
+        );
+        ctxt.arc(
+            TILE_SIZE * (this.x + 0.5),
+            TILE_SIZE * (this.y + 0.5) - 10,
+            TILE_SIZE * BALL_SIZE_FACTOR,
+            Math.PI,
+            0,
+            true
+        );
+        ctxt.fill()
+        
+        // bottom highlight
+        ctxt.fillStyle = "#FFF6"
+        ctxt.beginPath();
+        ctxt.arc(
+            TILE_SIZE * (this.x + 0.5),
+            TILE_SIZE * (this.y + 0.5),
+            TILE_SIZE * BALL_SIZE_FACTOR,
+            0,
+            Math.PI
+        );
+        ctxt.arc(
+            TILE_SIZE * (this.x + 0.5),
+            TILE_SIZE * (this.y + 0.5) - 1,
+            TILE_SIZE * BALL_SIZE_FACTOR,
+            Math.PI,
+            0,
+            true
+        );
+        ctxt.fill()
+
+        // top highlight
+        ctxt.fillStyle = "#FFF4"
+        ctxt.ellipse(
+            TILE_SIZE * (this.x + 0.65),
+            TILE_SIZE * (this.y + 0.3),
+            TILE_SIZE * BALL_SIZE_FACTOR / 3,
+            TILE_SIZE * BALL_SIZE_FACTOR / 5,
+            Math.PI / 4,
+            0,
+            2 * Math.PI
+        );
+        ctxt.fill()
     }
 
     update(){
