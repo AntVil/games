@@ -29,6 +29,7 @@ let ctxt;
 let mapCompleted;
 
 let inputHandler;
+let audioHandler;
 
 let map;
 
@@ -59,6 +60,10 @@ window.onload = () => {
 
     canvas.addEventListener("mousedown", (e) => {
         e.preventDefault();
+
+        if(audioHandler === undefined){
+            audioHandler = new AudioHandler()
+        }
         
         let rect = canvas.getBoundingClientRect();
         let x = e.offsetX / rect.width;
@@ -88,6 +93,10 @@ window.onload = () => {
     canvas.addEventListener("touchstart", (e) => {
         e.preventDefault();
 
+        if(audioHandler === undefined){
+            audioHandler = new AudioHandler()
+        }
+
         let rect = canvas.getBoundingClientRect();
         let x = (e.touches[0].clientX - rect.left) / rect.width;
         let y = (e.touches[0].clientY - rect.top) / rect.height;
@@ -115,6 +124,10 @@ window.onload = () => {
 
     window.addEventListener("keydown", (e) => {
         if (e.repeat) return;
+
+        if(audioHandler === undefined){
+            audioHandler = new AudioHandler()
+        }
 
         if(e.key === "ArrowUp" || e.key === "w"){
             map.ball.goUp();
@@ -180,6 +193,27 @@ class InputHandler{
             }
             this.stop();
         }
+    }
+}
+
+class AudioHandler{
+    constructor(){
+        this.context = new AudioContext();
+        this.volume = this.context.createGain();
+        this.oscillator = this.context.createOscillator(); 
+
+        this.oscillator.type = "sine";
+        this.volume.connect(this.context.destination);
+        this.oscillator.connect(this.volume);
+    
+        this.volume.gain.setValueAtTime(0, this.context.currentTime);
+        this.oscillator.frequency.setValueAtTime(196, this.context.currentTime);
+        this.oscillator.start();
+    }
+
+    playStop(){
+        this.volume.gain.setTargetAtTime(1, this.context.currentTime, 0.01);
+        this.volume.gain.setTargetAtTime(0, this.context.currentTime + 0.1, 0.01);
     }
 }
 
@@ -369,6 +403,7 @@ class Map{
                 y > MAP_SIZE-1 ||
                 !this.grid[y][x].active
             ){
+                audioHandler.playStop();
                 this.ball.stop();
             }else if(!this.grid[y][x].colored){
                 this.grid[y][x].colored = true;
