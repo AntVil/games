@@ -15,10 +15,17 @@ const PARTICLE_ZIGZAG_FREQUENCY = 50;
 const PARTICLE_SPIRAL_ANGLE = 0.005;
 const PARTICLE_SPAWN_FRAME_COUNTER_CAP = 80;
 
+let renderCenterX;
+let renderCenterY;
+
+let inputCenterX;
+let inputCenterY;
+
 let canvas;
 let ctxt;
 
-let audio;
+let audioHandler;
+let inputHandler;
 
 let gameOver;
 
@@ -37,6 +44,20 @@ function setViewportSize(){
     document.documentElement.style.setProperty('--screen-width', `${window.innerWidth}px`);
     document.documentElement.style.setProperty('--screen-height', `${window.innerHeight}px`);
 
+    if(canvas.width > canvas.height){
+        renderCenterX = 0.5;
+        renderCenterY = 0.5;
+        inputHandler.centerX = 0.5;
+        inputHandler.centerY = 0.5;
+        inputHandler.display = false;
+    }else{
+        renderCenterX = 0.5;
+        renderCenterY = 0.45;
+        inputHandler.centerX = 0.5;
+        inputHandler.centerY = 0.8;
+        inputHandler.display = true;
+    }
+
     gameSize = Math.min(canvas.width, canvas.height);
 }
 
@@ -49,72 +70,57 @@ window.onload = () => {
         navigator.serviceWorker.register("./serviceWorker.js");
     }
 
-    setViewportSize();
-
     gameOver = document.getElementById("gameOver");
 
-    audio = new AudioHandler();
+    audioHandler = new AudioHandler();
+    inputHandler = new InputHandler();
+
+    setViewportSize();
 
     game = new Game();
 
     canvas.addEventListener("mousedown", (e) => {
         e.preventDefault();
 
-        audio.context.resume();
+        audioHandler.context.resume();
 
-        mouseDown = true;
-        
-        let angle = Math.atan2(
-            e.clientY - canvas.height / 2,
-            e.clientX - canvas.width / 2
-        );
-
-        game.handleInput(angle);
+        inputHandler.start(e.clientX, e.clientY);
     });
 
     canvas.addEventListener("mouseleave", (e) => {
-        mouseDown = false;
+        inputHandler.stop(e.clientX, e.clientY);
     })
 
     canvas.addEventListener("mouseup", (e) => {
-        mouseDown = false;
+        inputHandler.stop(e.clientX, e.clientY);
     });
 
     canvas.addEventListener("mousemove", (e) => {
         e.preventDefault();
         
         if(mouseDown){
-            let angle = Math.atan2(
-                e.clientY - canvas.height / 2,
-                e.clientX - canvas.width / 2
-            );
-
-            game.handleInput(angle);
+            inputHandler.move(e.clientX, e.clientY);
         }
     });
 
     canvas.addEventListener("touchstart", (e) => {
         e.preventDefault();
 
-        audio.context.resume();
+        audioHandler.context.resume();
 
-        let angle = Math.atan2(
-            e.touches[0].clientY - canvas.height / 2,
-            e.touches[0].clientX - canvas.width / 2
-        );
-
-        game.handleInput(angle);
+        inputHandler.start(e.touches[0].clientX, e.touches[0].clientY);
     });
 
     canvas.addEventListener("touchmove", (e) => {
         e.preventDefault();
 
-        let angle = Math.atan2(
-            e.touches[0].clientY - canvas.height / 2,
-            e.touches[0].clientX - canvas.width / 2
-        );
+        inputHandler.move(e.touches[0].clientX, e.touches[0].clientY);
+    });
 
-        game.handleInput(angle);
+    canvas.addEventListener("touchend", (e) => {
+        e.preventDefault();
+
+        inputHandler.stop();
     });
 
     setInterval(updateLoop, 1000 / FPS);
@@ -125,6 +131,8 @@ function renderLoop(){
     ctxt.clearRect(0, 0, canvas.width, canvas.height);
 
     game.render(ctxt);
+
+    inputHandler.render(ctxt);
 
     requestAnimationFrame(renderLoop);
 }
@@ -193,6 +201,81 @@ class AudioHandler{
     }
 }
 
+class InputHandler{
+    constructor(){
+        this.mousePosition = [undefined, undefined];
+        this.centerX = 0.5;
+        this.centerY = 0.5;
+        this.radius = 1 / 8;
+        this.display = false;
+    }
+
+    render(ctxt){
+        if(!this.display){
+            return;
+        }
+        
+        ctxt.strokeStyle = "#9999"
+        ctxt.fillStyle = "#9999"
+        ctxt.beginPath();
+        ctxt.arc(
+            this.centerX * canvas.width,
+            this.centerY * canvas.height,
+            gameSize * this.radius,
+            0,
+            2 * Math.PI
+        );
+        ctxt.stroke();
+
+        let x;
+        let y;
+        if(Math.hypot(this.mousePosition[1] - this.centerY * canvas.height, this.mousePosition[0] - this.centerX * canvas.width) > gameSize * this.radius){
+            let angle = Math.atan2(
+                this.mousePosition[1] - this.centerY * canvas.height,
+                this.mousePosition[0] - this.centerX * canvas.width
+            );
+
+            x = this.centerX * canvas.width + gameSize * this.radius * Math.cos(angle);
+            y = this.centerY * canvas.height + gameSize * this.radius * Math.sin(angle);
+        }else{
+            x = this.mousePosition[0];
+            y = this.mousePosition[1];
+        }
+        
+        ctxt.beginPath();
+        ctxt.arc(x, y, this.radius * gameSize / 2, 0, 2 * Math.PI);
+        ctxt.fill();
+    }
+
+    start(x, y){
+        this.mousePosition = [x, y];
+        
+        let angle = Math.atan2(
+            y - this.centerY * canvas.height,
+            x - this.centerX * canvas.width
+        );
+
+        game.handleInput(angle);
+    }
+
+    move(x, y){
+        if(this.mousePosition[0] !== undefined && this.mousePosition[1] !== undefined){
+            this.mousePosition = [x, y];
+
+            let angle = Math.atan2(
+                y - this.centerY * canvas.height,
+                x - this.centerX * canvas.width
+            );
+    
+            game.handleInput(angle);
+        }
+    }
+
+    stop(){
+        this.mousePosition = [undefined, undefined];
+    }
+}
+
 class Game{
     constructor(){
         this.particleTypes = [
@@ -223,15 +306,15 @@ class Game{
                 if(this.arc.intercepts(this.particles[i])){
                     this.particles.splice(i, 1);
                     this.arc.shrink();
-                    audio.playGeneric();
+                    audioHandler.playGeneric();
                 }else if(this.core.intercepts(this.particles[i])){
                     if(this.particles[i] instanceof LinearParticle){
                         this.core.score++;
                         this.arc.grow();
-                        audio.playPowerup();
+                        audioHandler.playPowerup();
                     }else{
                         gameOver.checked = true;
-                        audio.playLost();
+                        audioHandler.playLost();
                     }
 
                     this.particles.splice(i, 1);
@@ -264,8 +347,6 @@ class Game{
 
 class Arc{
     constructor(){
-        this.x = 0.5;
-        this.y = 0.5;
         this.rotation = 0;
         this.goalRotation = 0;
         this.arcSizeAngle = ARC_START_SIZE_ANGLE;
@@ -274,11 +355,12 @@ class Arc{
     render(ctxt){
         ctxt.setLineDash([gameSize / 100, gameSize / 100]);
         ctxt.fillStyle = "#000";
+        ctxt.strokeStyle = "#000"
         ctxt.lineWidth = ARC_WIDTH * gameSize / 10;
         ctxt.beginPath();
         ctxt.arc(
-            this.x * canvas.width,
-            this.y * canvas.height,
+            renderCenterX * canvas.width,
+            renderCenterY * canvas.height,
             ARC_DISTANCE * gameSize,
             0,
             2 * Math.PI
@@ -291,8 +373,8 @@ class Arc{
         ctxt.lineCap = "round";
         ctxt.beginPath();
         ctxt.arc(
-            this.x * canvas.width,
-            this.y * canvas.height,
+            renderCenterX * canvas.width,
+            renderCenterY * canvas.height,
             ARC_DISTANCE * gameSize,
             this.rotation - this.arcSizeAngle / 2,
             this.rotation + this.arcSizeAngle / 2
@@ -349,8 +431,6 @@ class Arc{
 
 class Core{
     constructor(){
-        this.x = 0.5;
-        this.y = 0.5;
         this.score = 0;
     }
 
@@ -358,8 +438,8 @@ class Core{
         ctxt.fillStyle = "#09F";
         ctxt.beginPath();
         ctxt.arc(
-            this.x * canvas.width,
-            this.y * canvas.height,
+            renderCenterX * canvas.width,
+            renderCenterY * canvas.height,
             CORE_SIZE * gameSize,
             0,
             2 * Math.PI
@@ -372,8 +452,8 @@ class Core{
         ctxt.font = `${gameSize / 10}px arial`;
         ctxt.fillText(
             this.score,
-            this.x * canvas.width,
-            this.y * canvas.height
+            renderCenterX * canvas.width,
+            renderCenterY * canvas.height
         );
     }
 
@@ -384,15 +464,13 @@ class Core{
 
 class LinearParticle{
     constructor(){
-        this.x = 0.5;
-        this.y = 0.5;
         this.angle = 2 * Math.PI * Math.random();
         this.distance = PARTICLE_START_DISTANCE;
     }
 
     render(ctxt){
-        let x = this.x * canvas.width + this.distance * gameSize * Math.cos(this.angle);
-        let y = this.y * canvas.height + this.distance * gameSize * Math.sin(this.angle);
+        let x = renderCenterX * canvas.width + this.distance * gameSize * Math.cos(this.angle);
+        let y = renderCenterY * canvas.height + this.distance * gameSize * Math.sin(this.angle);
         ctxt.fillStyle = "#09F";
         ctxt.beginPath();
         ctxt.arc(
@@ -412,8 +490,6 @@ class LinearParticle{
 
 class ZigzagParticle{
     constructor(){
-        this.x = 0.5;
-        this.y = 0.5;
         this.baseAngle = 2 * Math.PI * Math.random();
         this.angle = this.baseAngle;
         this.distance = PARTICLE_START_DISTANCE;
@@ -421,8 +497,8 @@ class ZigzagParticle{
     }
 
     render(ctxt){
-        let x = this.x * canvas.width + this.distance * gameSize * Math.cos(this.angle);
-        let y = this.y * canvas.height + this.distance * gameSize * Math.sin(this.angle);
+        let x = renderCenterX * canvas.width + this.distance * gameSize * Math.cos(this.angle);
+        let y = renderCenterY * canvas.height + this.distance * gameSize * Math.sin(this.angle);
         let r = PARTICLE_SIZE * gameSize;
         let t = (Date.now() - this.startTime)/ 200;
         ctxt.fillStyle = "#9F0";
@@ -442,16 +518,14 @@ class ZigzagParticle{
 
 class SpiralParticle{
     constructor(){
-        this.x = 0.5;
-        this.y = 0.5;
         this.angle = 2 * Math.PI * Math.random();
         this.distance = PARTICLE_START_DISTANCE;
         this.startTime = Date.now();
     }
 
     render(ctxt){
-        let x = this.x * canvas.width + this.distance * gameSize * Math.cos(this.angle);
-        let y = this.y * canvas.height + this.distance * gameSize * Math.sin(this.angle);
+        let x = renderCenterX * canvas.width + this.distance * gameSize * Math.cos(this.angle);
+        let y = renderCenterY * canvas.height + this.distance * gameSize * Math.sin(this.angle);
         let r = PARTICLE_SIZE * gameSize;
         let t = (Date.now() - this.startTime)/ 200;
         ctxt.fillStyle = "#F09";
@@ -474,16 +548,14 @@ class SpiralParticle{
 
 class ReverseSpiralParticle{
     constructor(){
-        this.x = 0.5;
-        this.y = 0.5;
         this.angle = 2 * Math.PI * Math.random();
         this.distance = PARTICLE_START_DISTANCE;
         this.startTime = Date.now();
     }
 
     render(ctxt){
-        let x = this.x * canvas.width + this.distance * gameSize * Math.cos(this.angle);
-        let y = this.y * canvas.height + this.distance * gameSize * Math.sin(this.angle);
+        let x = renderCenterX * canvas.width + this.distance * gameSize * Math.cos(this.angle);
+        let y = renderCenterY * canvas.height + this.distance * gameSize * Math.sin(this.angle);
         let r = PARTICLE_SIZE * gameSize;
         let t = (Date.now() - this.startTime)/ 200;
         ctxt.fillStyle = "#F90";
@@ -506,16 +578,14 @@ class ReverseSpiralParticle{
 
 class FastParticle{
     constructor(){
-        this.x = 0.5;
-        this.y = 0.5;
         this.angle = 2 * Math.PI * Math.random();
         this.distance = PARTICLE_START_DISTANCE;
         this.startTime = Date.now();
     }
 
     render(ctxt){
-        let x = this.x * canvas.width + this.distance * gameSize * Math.cos(this.angle);
-        let y = this.y * canvas.height + this.distance * gameSize * Math.sin(this.angle);
+        let x = renderCenterX * canvas.width + this.distance * gameSize * Math.cos(this.angle);
+        let y = renderCenterY * canvas.height + this.distance * gameSize * Math.sin(this.angle);
         let r = PARTICLE_SIZE * gameSize;
         let t = (Date.now() - this.startTime)/ 200;
         ctxt.fillStyle = "#F00";
