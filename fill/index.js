@@ -2,13 +2,13 @@ const MAP_SIZE = 6;
 const PATH_MIN_LENGTH = 6;
 const PATH_MAX_LENGTH = 20;
 
-const CANVAS_RESOLUTION = 400;
-
 const TILE_COLOR = "#CCC";
 const TILE_PADDING_FACTOR = 0.05;
 const TILE_PATH_PADDING_FACTOR = 0.05;
+const TILE_PATH_LINE_FACTOR = 0.01;
+const TILE_PATH_DASH_FACTOR = 0.05;
 
-const TILE_SIZE = CANVAS_RESOLUTION / MAP_SIZE;
+let tileSize;
 
 let canvas;
 let ctxt;
@@ -20,8 +20,16 @@ let mouseDown = false;
 let map;
 
 function setViewportSize(){
+    canvas = document.getElementById("canvas");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    ctxt = canvas.getContext("2d");
+    
     document.documentElement.style.setProperty('--screen-width', `${window.innerWidth}px`);
     document.documentElement.style.setProperty('--screen-height', `${window.innerHeight}px`);
+
+    gameSize = Math.min(canvas.width, canvas.height);
+    tileSize = (gameSize / MAP_SIZE);
 }
 
 window.onresize = () => setViewportSize();
@@ -35,11 +43,6 @@ window.onload = () => {
 
     setViewportSize();
 
-    canvas = document.getElementById("canvas");
-    canvas.width = CANVAS_RESOLUTION;
-    canvas.height = CANVAS_RESOLUTION;
-    ctxt = canvas.getContext("2d");
-
     canvas.addEventListener("mousedown", (e) => {
         e.preventDefault();
 
@@ -49,9 +52,8 @@ window.onload = () => {
 
         mouseDown = true;
         
-        let rect = canvas.getBoundingClientRect();
-        let x = Math.floor((e.offsetX / rect.width) * MAP_SIZE);
-        let y = Math.floor((e.offsetY / rect.height) * MAP_SIZE);
+        let x = Math.floor(((e.clientX - (canvas.width - gameSize) / 2) / gameSize) * MAP_SIZE);
+        let y = Math.floor(((e.clientY - (canvas.height - gameSize) / 2) / gameSize) * MAP_SIZE);
 
         map.handleInput([x, y]);
     });
@@ -68,9 +70,8 @@ window.onload = () => {
         e.preventDefault();
         
         if(mouseDown){
-            let rect = canvas.getBoundingClientRect();
-            let x = Math.floor((e.offsetX / rect.width) * MAP_SIZE);
-            let y = Math.floor((e.offsetY / rect.height) * MAP_SIZE);
+            let x = Math.floor(((e.clientX - (canvas.width - gameSize) / 2) / gameSize) * MAP_SIZE);
+            let y = Math.floor(((e.clientY - (canvas.height - gameSize) / 2) / gameSize) * MAP_SIZE);
 
             map.handleInput([x, y]);
         }
@@ -83,9 +84,8 @@ window.onload = () => {
             audio = new AudioHandler();
         }
 
-        let rect = canvas.getBoundingClientRect();
-        let x = Math.floor(((e.touches[0].clientX - rect.left) / rect.width) * MAP_SIZE);
-        let y = Math.floor(((e.touches[0].clientY - rect.top) / rect.height) * MAP_SIZE);
+        let x = Math.floor(((e.touches[0].clientX - (canvas.width - gameSize) / 2) / gameSize) * MAP_SIZE);
+        let y = Math.floor(((e.touches[0].clientY - (canvas.height - gameSize) / 2) / gameSize) * MAP_SIZE);
 
         map.handleInput([x, y]);
     });
@@ -93,9 +93,8 @@ window.onload = () => {
     canvas.addEventListener("touchmove", (e) => {
         e.preventDefault();
 
-        let rect = canvas.getBoundingClientRect();
-        let x = Math.floor(((e.touches[0].clientX - rect.left) / rect.width) * MAP_SIZE);
-        let y = Math.floor(((e.touches[0].clientY - rect.top) / rect.height) * MAP_SIZE);
+        let x = Math.floor(((e.touches[0].clientX - (canvas.width - gameSize) / 2) / gameSize) * MAP_SIZE);
+        let y = Math.floor(((e.touches[0].clientY - (canvas.height - gameSize) / 2) / gameSize) * MAP_SIZE);
 
         map.handleInput([x, y]);
     });
@@ -110,7 +109,12 @@ window.onload = () => {
 function loop(){
     ctxt.clearRect(0, 0, canvas.width, canvas.height);
 
+    ctxt.save();
+    ctxt.translate((canvas.width - gameSize) / 2, (canvas.height - gameSize) / 2);
+
     map.render(ctxt);
+
+    ctxt.restore();
 
     requestAnimationFrame(loop);
 }
@@ -251,10 +255,10 @@ class MapTile{
         if(this.active){
             ctxt.fillStyle = TILE_COLOR;
             ctxt.fillRect(
-                Math.round(TILE_SIZE * (this.x + TILE_PADDING_FACTOR)),
-                Math.round(TILE_SIZE * (this.y + TILE_PADDING_FACTOR)),
-                Math.round(TILE_SIZE * (1 - 2 * TILE_PADDING_FACTOR)),
-                Math.round(TILE_SIZE * (1 - 2 * TILE_PADDING_FACTOR))
+                Math.round(tileSize * (this.x + TILE_PADDING_FACTOR)),
+                Math.round(tileSize * (this.y + TILE_PADDING_FACTOR)),
+                Math.round(tileSize * (1 - 2 * TILE_PADDING_FACTOR)),
+                Math.round(tileSize * (1 - 2 * TILE_PADDING_FACTOR))
             );
         }
     }
@@ -274,7 +278,7 @@ class Path{
             positions = this.positions;
         }
 
-        ctxt.lineWidth = Math.round(TILE_SIZE * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)));
+        ctxt.lineWidth = Math.round(tileSize * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)));
         if(this.isSolution){
             ctxt.strokeStyle = "#09FA";
             ctxt.fillStyle = "#09FA";
@@ -285,41 +289,41 @@ class Path{
         
         if(positions.length === 1){
             ctxt.fillRect(
-                TILE_SIZE * (positions[0][0] + TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR),
-                TILE_SIZE * (positions[0][1] + TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR),
-                TILE_SIZE * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)),
-                TILE_SIZE * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR))
+                tileSize * (positions[0][0] + TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR),
+                tileSize * (positions[0][1] + TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR),
+                tileSize * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR)),
+                tileSize * (1 - 2 * (TILE_PADDING_FACTOR + TILE_PATH_PADDING_FACTOR))
             );
         }else{
             ctxt.setLineDash([]);
             ctxt.beginPath();
             ctxt.lineCap = "square";
             ctxt.moveTo(
-                Math.round(TILE_SIZE * (positions[0][0] + 0.5)),
-                Math.round(TILE_SIZE * (positions[0][1] + 0.5))
+                Math.round(tileSize * (positions[0][0] + 0.5)),
+                Math.round(tileSize * (positions[0][1] + 0.5))
             );
             for(let i=0;i<positions.length;i++){
                 ctxt.lineTo(
-                    Math.round(TILE_SIZE * (positions[i][0] + 0.5)),
-                    Math.round(TILE_SIZE * (positions[i][1] + 0.5))
+                    Math.round(tileSize * (positions[i][0] + 0.5)),
+                    Math.round(tileSize * (positions[i][1] + 0.5))
                 );
             }
             ctxt.stroke();
         }
 
         if(!this.isSolution){
-            ctxt.lineWidth = 1;
+            ctxt.lineWidth = tileSize * TILE_PATH_LINE_FACTOR;
             ctxt.strokeStyle = "#FFF";
-            ctxt.setLineDash([5, 5]);
+            ctxt.setLineDash([tileSize * TILE_PATH_DASH_FACTOR, tileSize * TILE_PATH_DASH_FACTOR]);
             ctxt.beginPath();
             ctxt.moveTo(
-                Math.round(TILE_SIZE * (positions[0][0] + 0.5)),
-                Math.round(TILE_SIZE * (positions[0][1] + 0.5))
+                Math.round(tileSize * (positions[0][0] + 0.5)),
+                Math.round(tileSize * (positions[0][1] + 0.5))
             );
             for(let i=1;i<positions.length;i++){
                 ctxt.lineTo(
-                    Math.round(TILE_SIZE * (positions[i][0] + 0.5)),
-                    Math.round(TILE_SIZE * (positions[i][1] + 0.5))
+                    Math.round(tileSize * (positions[i][0] + 0.5)),
+                    Math.round(tileSize * (positions[i][1] + 0.5))
                 );
             }
             ctxt.stroke();

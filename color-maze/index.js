@@ -6,11 +6,9 @@ const MIN_DISABLED_POINTS_COUNT = 6;
 const MIN_ACTIVE_POINTS_COUNT = 20;
 const PATH_MAX_LENGTH = 10;
 
-const CANVAS_RESOLUTION = 1024;
-const SHADOW_LENGTH = CANVAS_RESOLUTION * 0.005;
-const HIGHLIGHT_LENGTH = CANVAS_RESOLUTION * 0;
-const WALL_LENGTH_X = CANVAS_RESOLUTION * 0.02;
-const WALL_LENGTH_Y = CANVAS_RESOLUTION * 0.02;
+const SHADOW_LENGTH = 0.1;
+const WALL_LENGTH_X = 0.2;
+const WALL_LENGTH_Y = 0.2;
 
 const MAP_GAP_COLOR = "#000";
 const TILE_COLOR = "#222";
@@ -21,7 +19,8 @@ const TILE_PADDING_FACTOR = Math.pow(2, -8);
 const BALL_SIZE_FACTOR = 0.4;
 const BALL_SPEED = 0.4;
 
-const TILE_SIZE = CANVAS_RESOLUTION / MAP_SIZE;
+let tileSize;
+let gameSize;
 
 let canvas;
 let ctxt;
@@ -34,8 +33,16 @@ let audioHandler;
 let map;
 
 function setViewportSize(){
+    canvas = document.getElementById("canvas");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    ctxt = canvas.getContext("2d");
+    
     document.documentElement.style.setProperty('--screen-width', `${window.innerWidth}px`);
     document.documentElement.style.setProperty('--screen-height', `${window.innerHeight}px`);
+
+    gameSize = Math.min(canvas.width, canvas.height);
+    tileSize = (gameSize / MAP_SIZE);
 }
 
 window.onresize = () => setViewportSize();
@@ -49,11 +56,6 @@ window.onload = () => {
 
     setViewportSize();
 
-    canvas = document.getElementById("canvas");
-    canvas.width = CANVAS_RESOLUTION;
-    canvas.height = CANVAS_RESOLUTION;
-    ctxt = canvas.getContext("2d");
-
     mapCompleted = document.getElementById("mapCompleted");
 
     inputHandler = new InputHandler();
@@ -65,9 +67,8 @@ window.onload = () => {
             audioHandler = new AudioHandler()
         }
         
-        let rect = canvas.getBoundingClientRect();
-        let x = e.offsetX / rect.width;
-        let y = e.offsetY / rect.height;
+        let x = e.clientX / gameSize;
+        let y = e.clientY / gameSize;
 
         inputHandler.start(x, y);
     });
@@ -83,9 +84,8 @@ window.onload = () => {
     canvas.addEventListener("mousemove", (e) => {
         e.preventDefault();
         
-        let rect = canvas.getBoundingClientRect();
-        let x = e.offsetX / rect.width;
-        let y = e.offsetY / rect.height;
+        let x = e.clientX / gameSize;
+        let y = e.clientY / gameSize;
 
         inputHandler.move(x, y);
     });
@@ -97,9 +97,8 @@ window.onload = () => {
             audioHandler = new AudioHandler()
         }
 
-        let rect = canvas.getBoundingClientRect();
-        let x = (e.touches[0].clientX - rect.left) / rect.width;
-        let y = (e.touches[0].clientY - rect.top) / rect.height;
+        let x = e.touches[0].clientX / gameSize;
+        let y = e.touches[0].clientY / gameSize;
 
         inputHandler.start(x, y);
     });
@@ -107,9 +106,8 @@ window.onload = () => {
     canvas.addEventListener("touchmove", (e) => {
         e.preventDefault();
 
-        let rect = canvas.getBoundingClientRect();
-        let x = (e.touches[0].clientX - rect.left) / rect.width;
-        let y = (e.touches[0].clientY - rect.top) / rect.height;
+        let x = e.touches[0].clientX / gameSize;
+        let y = e.touches[0].clientY / gameSize;
 
         inputHandler.move(x, y);
     });
@@ -149,10 +147,17 @@ window.onload = () => {
 }
 
 function renderLoop(){
-    ctxt.fillStyle = MAP_GAP_COLOR;
-    ctxt.fillRect(0, 0, canvas.width, canvas.height);
+    ctxt.save();
+    ctxt.translate((canvas.width - gameSize) / 2, (canvas.height - gameSize) / 2);
 
     map.render(ctxt);
+
+    ctxt.restore();
+    ctxt.fillStyle = MAP_COLOR;
+    ctxt.fillRect(0, 0, canvas.width, (canvas.height - gameSize) / 2);
+    ctxt.fillRect(0, canvas.height - (canvas.height - gameSize) / 2, canvas.width, (canvas.height - gameSize) / 2);
+    ctxt.fillRect(0, 0, (canvas.width - gameSize) / 2, canvas.height);
+    ctxt.fillRect(canvas.width - (canvas.width - gameSize) / 2, 0, (canvas.width - gameSize) / 2, canvas.height);
 
     requestAnimationFrame(renderLoop);
 }
@@ -177,7 +182,7 @@ class InputHandler{
     move(x, y){
         let dx = x - this.mousePosition[0];
         let dy = y - this.mousePosition[1];
-        if(Math.hypot(dy, dx) > 0.1){
+        if(Math.hypot(dy, dx) > 0.05){
             if(Math.abs(dx) > Math.abs(dy)){
                 if(dx > 0){
                     map.ball.goRight();
@@ -347,6 +352,9 @@ class Map{
     }
 
     render(ctxt){
+        ctxt.fillStyle = MAP_GAP_COLOR;
+        ctxt.fillRect(0, 0, gameSize, gameSize);
+
         for(let i=MAP_SIZE-1;i>=0;i--){
             for(let j=MAP_SIZE-1;j>=0;j--){
                 if(this.grid[i][j].active){
@@ -373,7 +381,7 @@ class Map{
 
         // hide wall of lowest row
         ctxt.fillStyle = MAP_COLOR;
-        ctxt.fillRect(0, CANVAS_RESOLUTION - WALL_LENGTH_Y, CANVAS_RESOLUTION, WALL_LENGTH_Y);
+        ctxt.fillRect(0, gameSize - tileSize * WALL_LENGTH_Y, gameSize, tileSize * WALL_LENGTH_Y);
     }
 
     update(){
@@ -444,10 +452,10 @@ class MapTile{
                 ctxt.fillStyle = TILE_COLOR;
             }
             ctxt.fillRect(
-                TILE_SIZE * (this.x + TILE_PADDING_FACTOR),
-                TILE_SIZE * (this.y + TILE_PADDING_FACTOR),
-                TILE_SIZE * (1 - 2 * TILE_PADDING_FACTOR),
-                TILE_SIZE * (1 - 2 * TILE_PADDING_FACTOR)
+                tileSize * (this.x + TILE_PADDING_FACTOR),
+                tileSize * (this.y + TILE_PADDING_FACTOR),
+                tileSize * (1 - 2 * TILE_PADDING_FACTOR),
+                tileSize * (1 - 2 * TILE_PADDING_FACTOR)
             );
         }else{
             let wallX = WALL_LENGTH_X * (this.x - MAP_SIZE/2) / MAP_SIZE
@@ -455,29 +463,28 @@ class MapTile{
             ctxt.fillStyle = WALL_COLOR;
             ctxt.beginPath();
             if(wallX < 0){
-                ctxt.moveTo(TILE_SIZE * (this.x + 1), TILE_SIZE * this.y);
-                ctxt.lineTo(TILE_SIZE * (this.x + 1), TILE_SIZE * (this.y + 1));
-                ctxt.lineTo(TILE_SIZE * this.x, TILE_SIZE * (this.y + 1));
-                ctxt.lineTo(TILE_SIZE * this.x + wallX, TILE_SIZE * (this.y + 1) - WALL_LENGTH_Y);
-                ctxt.lineTo(TILE_SIZE * (this.x + 1) + wallX, TILE_SIZE * (this.y + 1) - WALL_LENGTH_Y);
-                ctxt.lineTo(TILE_SIZE * (this.x + 1) + wallX, TILE_SIZE * this.y - WALL_LENGTH_Y);
+                ctxt.moveTo(tileSize * (this.x + 1), tileSize * this.y);
+                ctxt.lineTo(tileSize * (this.x + 1), tileSize * (this.y + 1));
+                ctxt.lineTo(tileSize * this.x, tileSize * (this.y + 1));
+                ctxt.lineTo(tileSize * (this.x + wallX), tileSize * (this.y + 1 - WALL_LENGTH_Y));
+                ctxt.lineTo(tileSize * (this.x + 1 + wallX), tileSize * (this.y + 1 - WALL_LENGTH_Y));
+                ctxt.lineTo(tileSize * (this.x + 1 + wallX), tileSize * (this.y - WALL_LENGTH_Y));
             }else{
-                ctxt.moveTo(TILE_SIZE * this.x, TILE_SIZE * this.y);
-                ctxt.lineTo(TILE_SIZE * this.x, TILE_SIZE * (this.y + 1));
-                ctxt.lineTo(TILE_SIZE * (this.x + 1), TILE_SIZE * (this.y + 1));
-                ctxt.lineTo(TILE_SIZE * (this.x + 1) + wallX, TILE_SIZE * (this.y + 1) - WALL_LENGTH_Y);
-                ctxt.lineTo(TILE_SIZE * this.x + wallX, TILE_SIZE * (this.y + 1) - WALL_LENGTH_Y);
-                ctxt.lineTo(TILE_SIZE * this.x + wallX, TILE_SIZE * this.y - WALL_LENGTH_Y);
+                ctxt.moveTo(tileSize * this.x, tileSize * this.y);
+                ctxt.lineTo(tileSize * this.x, tileSize * (this.y + 1));
+                ctxt.lineTo(tileSize * (this.x + 1), tileSize * (this.y + 1));
+                ctxt.lineTo(tileSize * (this.x + 1 + wallX), tileSize * (this.y + 1 - WALL_LENGTH_Y));
+                ctxt.lineTo(tileSize * (this.x + wallX), tileSize * (this.y + 1 - WALL_LENGTH_Y));
+                ctxt.lineTo(tileSize * (this.x + wallX), tileSize * (this.y - WALL_LENGTH_Y));
             }
             ctxt.fill();
             
-            
             ctxt.fillStyle = MAP_COLOR;
             ctxt.fillRect(
-                TILE_SIZE * this.x + wallX - 1,
-                TILE_SIZE * this.y - WALL_LENGTH_Y - 1,
-                TILE_SIZE + 2,
-                TILE_SIZE + 2
+                tileSize * (this.x + wallX) - 1,
+                tileSize * (this.y - WALL_LENGTH_Y) - 1,
+                tileSize + 2,
+                tileSize + 2
             );
         }
     }
@@ -507,9 +514,9 @@ class Ball{
         for(let i=0;i<this.history.length;i++){
             ctxt.beginPath();
             ctxt.arc(
-                TILE_SIZE * (this.history[i][0] + 0.5),
-                TILE_SIZE * (this.history[i][1] + 0.5),
-                TILE_SIZE * BALL_SIZE_FACTOR * Math.pow(i / this.history.length, 2),
+                tileSize * (this.history[i][0] + 0.5),
+                tileSize * (this.history[i][1] + 0.5),
+                tileSize * BALL_SIZE_FACTOR * Math.pow(i / this.history.length, 2),
                 0,
                 2 * Math.PI
             );
@@ -517,15 +524,15 @@ class Ball{
         }
 
         ctxt.shadowOffsetX = 0;
-        ctxt.shadowOffsetY = SHADOW_LENGTH;
+        ctxt.shadowOffsetY = tileSize * SHADOW_LENGTH;
         ctxt.shadowBlur = 7;
         ctxt.shadowColor = "#000";
 
         ctxt.beginPath();
         ctxt.arc(
-            TILE_SIZE * (this.x + 0.5),
-            TILE_SIZE * (this.y + 0.5),
-            TILE_SIZE * BALL_SIZE_FACTOR,
+            tileSize * (this.x + 0.5),
+            tileSize * (this.y + 0.5),
+            tileSize * BALL_SIZE_FACTOR,
             0,
             2 * Math.PI
         );
@@ -540,16 +547,16 @@ class Ball{
         ctxt.fillStyle = "#0006"
         ctxt.beginPath();
         ctxt.arc(
-            TILE_SIZE * (this.x + 0.5),
-            TILE_SIZE * (this.y + 0.5),
-            TILE_SIZE * BALL_SIZE_FACTOR,
+            tileSize * (this.x + 0.5),
+            tileSize * (this.y + 0.5),
+            tileSize * BALL_SIZE_FACTOR,
             0,
             Math.PI
         );
         ctxt.arc(
-            TILE_SIZE * (this.x + 0.5),
-            TILE_SIZE * (this.y + 0.5) - 10,
-            TILE_SIZE * BALL_SIZE_FACTOR,
+            tileSize * (this.x + 0.5),
+            tileSize * (this.y + 0.5 - SHADOW_LENGTH),
+            tileSize * BALL_SIZE_FACTOR,
             Math.PI,
             0,
             true
@@ -560,16 +567,16 @@ class Ball{
         ctxt.fillStyle = "#FFF6"
         ctxt.beginPath();
         ctxt.arc(
-            TILE_SIZE * (this.x + 0.5),
-            TILE_SIZE * (this.y + 0.5),
-            TILE_SIZE * BALL_SIZE_FACTOR,
+            tileSize * (this.x + 0.5),
+            tileSize * (this.y + 0.5),
+            tileSize * BALL_SIZE_FACTOR,
             0,
             Math.PI
         );
         ctxt.arc(
-            TILE_SIZE * (this.x + 0.5),
-            TILE_SIZE * (this.y + 0.5) - 1,
-            TILE_SIZE * BALL_SIZE_FACTOR,
+            tileSize * (this.x + 0.5),
+            tileSize * (this.y + 0.5) - 1,
+            tileSize * BALL_SIZE_FACTOR,
             Math.PI,
             0,
             true
@@ -579,10 +586,10 @@ class Ball{
         // top highlight
         ctxt.fillStyle = "#FFF4"
         ctxt.ellipse(
-            TILE_SIZE * (this.x + 0.65),
-            TILE_SIZE * (this.y + 0.3),
-            TILE_SIZE * BALL_SIZE_FACTOR / 3,
-            TILE_SIZE * BALL_SIZE_FACTOR / 5,
+            tileSize * (this.x + 0.65),
+            tileSize * (this.y + 0.3),
+            tileSize * BALL_SIZE_FACTOR / 3,
+            tileSize * BALL_SIZE_FACTOR / 5,
             Math.PI / 4,
             0,
             2 * Math.PI

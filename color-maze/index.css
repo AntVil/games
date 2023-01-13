@@ -1,7 +1,6 @@
 :root{
     --screen-width: 100vw;
     --screen-height: 100vh;
-    --canvas-size: min(var(--screen-width), var(--screen-height));
 }
 
 *{
@@ -28,8 +27,8 @@ body{
 }
 
 canvas{
-    width: var(--canvas-size);
-    height: var(--canvas-size);
+    width: var(--canvas-width);
+    height: var(--canvas-height);
     image-rendering: crisp-edges;
 }
 
