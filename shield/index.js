@@ -18,9 +18,6 @@ const PARTICLE_SPAWN_FRAME_COUNTER_CAP = 80;
 let renderCenterX;
 let renderCenterY;
 
-let inputCenterX;
-let inputCenterY;
-
 let canvas;
 let ctxt;
 
@@ -28,8 +25,6 @@ let audioHandler;
 let inputHandler;
 
 let gameOver;
-
-let mouseDown = false;
 
 let gameSize;
 
@@ -41,8 +36,8 @@ function setViewportSize(){
     canvas.height = window.innerHeight;
     ctxt = canvas.getContext("2d");
 
-    document.documentElement.style.setProperty('--screen-width', `${window.innerWidth}px`);
-    document.documentElement.style.setProperty('--screen-height', `${window.innerHeight}px`);
+    document.documentElement.style.setProperty("--screen-width", `${window.innerWidth}px`);
+    document.documentElement.style.setProperty("--screen-height", `${window.innerHeight}px`);
 
     if(canvas.width > canvas.height){
         renderCenterX = 0.5;
@@ -98,9 +93,7 @@ window.onload = () => {
     canvas.addEventListener("mousemove", (e) => {
         e.preventDefault();
         
-        if(mouseDown){
-            inputHandler.move(e.clientX, e.clientY);
-        }
+        inputHandler.move(e.clientX, e.clientY);
     });
 
     canvas.addEventListener("touchstart", (e) => {
@@ -155,7 +148,7 @@ class AudioHandler{
         volume.gain.linearRampToValueAtTime(0, endTime);
 
         let oscillator = this.context.createOscillator();
-        oscillator.type = 'sine';
+        oscillator.type = "sine";
         oscillator.frequency.setValueAtTime(293.66, this.context.currentTime);
         oscillator.frequency.setValueAtTime(329.63, this.context.currentTime + 0.1);
         oscillator.connect(volume);
@@ -173,7 +166,7 @@ class AudioHandler{
         volume.gain.linearRampToValueAtTime(0, endTime);
 
         let oscillator = this.context.createOscillator();
-        oscillator.type = 'sine';
+        oscillator.type = "sine";
         oscillator.frequency.setValueAtTime(220, this.context.currentTime);
         oscillator.connect(volume);
 
@@ -190,7 +183,7 @@ class AudioHandler{
         volume.gain.linearRampToValueAtTime(0, endTime);
 
         let oscillator = this.context.createOscillator();
-        oscillator.type = 'sine';
+        oscillator.type = "sine";
         oscillator.frequency.setValueAtTime(329.63, this.context.currentTime);
         oscillator.frequency.setValueAtTime(293.66, this.context.currentTime + 0.1);
         oscillator.frequency.setValueAtTime(261.63, this.context.currentTime + 0.2);

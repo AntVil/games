@@ -38,8 +38,8 @@ function setViewportSize(){
     canvas.height = window.innerHeight;
     ctxt = canvas.getContext("2d");
     
-    document.documentElement.style.setProperty('--screen-width', `${window.innerWidth}px`);
-    document.documentElement.style.setProperty('--screen-height', `${window.innerHeight}px`);
+    document.documentElement.style.setProperty("--screen-width", `${window.innerWidth}px`);
+    document.documentElement.style.setProperty("--screen-height", `${window.innerHeight}px`);
 
     gameSize = Math.min(canvas.width, canvas.height);
     tileSize = (gameSize / MAP_SIZE);
