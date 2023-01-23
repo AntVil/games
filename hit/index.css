@@ -1,0 +1,49 @@
+:root{
+    --screen-width: 100vw;
+    --screen-height: 100vh;
+}
+
+*{
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+}
+
+body{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    width: var(--screen-width);
+    height: var(--screen-height);
+    margin: 0;
+    background-color: #EEE;
+    overflow: hidden;
+}
+
+canvas{
+    width: var(--screen-width);
+    height: var(--screen-height);
+    image-rendering: crisp-edges;
+}
+
+input[type="checkbox"],
+input[type="checkbox"]:not(:checked)~label{
+    display: none;
+}
+
+label{
+    position: fixed;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: var(--screen-width);
+    height: var(--screen-height);
+    background-color: #FFFA;
+    font-size: calc(var(--screen-width) / 10);
+    font-family: "Helvetica", "Arial", sans-serif;
+}

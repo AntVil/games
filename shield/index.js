@@ -493,7 +493,7 @@ class ZigzagParticle{
         let x = renderCenterX * canvas.width + this.distance * gameSize * Math.cos(this.angle);
         let y = renderCenterY * canvas.height + this.distance * gameSize * Math.sin(this.angle);
         let r = PARTICLE_SIZE * gameSize;
-        let t = (Date.now() - this.startTime)/ 200;
+        let t = (Date.now() - this.startTime) / 200;
         ctxt.fillStyle = "#9F0";
         ctxt.beginPath();
         ctxt.moveTo(x + r * Math.cos(t), y + r * Math.sin(t));
@@ -520,7 +520,7 @@ class SpiralParticle{
         let x = renderCenterX * canvas.width + this.distance * gameSize * Math.cos(this.angle);
         let y = renderCenterY * canvas.height + this.distance * gameSize * Math.sin(this.angle);
         let r = PARTICLE_SIZE * gameSize;
-        let t = (Date.now() - this.startTime)/ 200;
+        let t = (Date.now() - this.startTime) / 200;
         ctxt.fillStyle = "#F09";
         ctxt.beginPath();
         ctxt.moveTo(x + r * Math.cos(t), y + r * Math.sin(t));
@@ -550,7 +550,7 @@ class ReverseSpiralParticle{
         let x = renderCenterX * canvas.width + this.distance * gameSize * Math.cos(this.angle);
         let y = renderCenterY * canvas.height + this.distance * gameSize * Math.sin(this.angle);
         let r = PARTICLE_SIZE * gameSize;
-        let t = (Date.now() - this.startTime)/ 200;
+        let t = (Date.now() - this.startTime) / 200;
         ctxt.fillStyle = "#F90";
         ctxt.beginPath();
         ctxt.moveTo(x + r * Math.cos(t), y + r * Math.sin(t));
@@ -580,7 +580,7 @@ class FastParticle{
         let x = renderCenterX * canvas.width + this.distance * gameSize * Math.cos(this.angle);
         let y = renderCenterY * canvas.height + this.distance * gameSize * Math.sin(this.angle);
         let r = PARTICLE_SIZE * gameSize;
-        let t = (Date.now() - this.startTime)/ 200;
+        let t = (Date.now() - this.startTime) / 200;
         ctxt.fillStyle = "#F00";
         ctxt.beginPath();
         ctxt.moveTo(x + r * Math.cos(t), y + r * Math.sin(t));
