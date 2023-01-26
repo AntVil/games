@@ -11,7 +11,7 @@ let gameSize;
 let canvas;
 let ctxt;
 
-let audio;
+let audioHandler;
 
 let game;
 
@@ -41,8 +41,8 @@ window.onload = () => {
     canvas.addEventListener("mousedown", (e) => {
         e.preventDefault();
 
-        if(audio === undefined){
-            audio = new AudioHandler();
+        if(audioHandler === undefined){
+            audioHandler = new AudioHandler();
         }
 
         game.handleInput();
@@ -51,8 +51,8 @@ window.onload = () => {
     canvas.addEventListener("touchstart", (e) => {
         e.preventDefault();
 
-        if(audio === undefined){
-            audio = new AudioHandler();
+        if(audioHandler === undefined){
+            audioHandler = new AudioHandler();
         }
 
         game.handleInput();
@@ -61,8 +61,8 @@ window.onload = () => {
     window.addEventListener("keydown", (e) => {
         if (e.repeat) return;
 
-        if(audio === undefined){
-            audio = new AudioHandler()
+        if(audioHandler === undefined){
+            audioHandler = new AudioHandler();
         }
 
         if(e.key === " "){
@@ -97,6 +97,24 @@ function updateLoop(){
 class AudioHandler{
     constructor(){
         this.context = new AudioContext();
+        this.playNothing();
+    }
+
+    playNothing(){
+        let endTime = this.context.currentTime + 0.1;
+
+        let volume = this.context.createGain();
+        volume.connect(this.context.destination);
+        volume.gain.setValueAtTime(0, this.context.currentTime);
+        volume.gain.linearRampToValueAtTime(0, endTime);
+
+        let oscillator = this.context.createOscillator();
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(220, this.context.currentTime);
+        oscillator.connect(volume);
+
+        oscillator.start();
+        oscillator.stop(endTime);
     }
 
     playGeneric(){
@@ -187,10 +205,10 @@ class Game{
 
             if(valid){
                 this.bullet = new Bullet();
-                audio.playGeneric();
+                audioHandler.playGeneric();
             }else{
                 this.bullet = null;
-                audio.playLost();
+                audioHandler.playLost();
                 document.getElementById("gameLost").checked = true;
             }
         }
