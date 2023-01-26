@@ -99,18 +99,37 @@ class AudioHandler{
         this.context = new AudioContext();
     }
 
-    play(frequency){
-        let volume = this.context.createGain();
-        let oscillator = this.context.createOscillator();
-
-        oscillator.type = "sine";
-        volume.connect(this.context.destination);
-        oscillator.connect(volume);
-
+    playGeneric(){
         let endTime = this.context.currentTime + 0.1;
+
+        let volume = this.context.createGain();
+        volume.connect(this.context.destination);
         volume.gain.setValueAtTime(1, this.context.currentTime);
         volume.gain.linearRampToValueAtTime(0, endTime);
-        oscillator.frequency.setValueAtTime(frequency, this.context.currentTime);
+
+        let oscillator = this.context.createOscillator();
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(220, this.context.currentTime);
+        oscillator.connect(volume);
+
+        oscillator.start();
+        oscillator.stop(endTime);
+    }
+
+    playLost(){
+        let endTime = this.context.currentTime + 0.3;
+
+        let volume = this.context.createGain();
+        volume.connect(this.context.destination);
+        volume.gain.setValueAtTime(1, this.context.currentTime);
+        volume.gain.linearRampToValueAtTime(0, endTime);
+
+        let oscillator = this.context.createOscillator();
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(329.63, this.context.currentTime);
+        oscillator.frequency.setValueAtTime(293.66, this.context.currentTime + 0.1);
+        oscillator.frequency.setValueAtTime(261.63, this.context.currentTime + 0.2);
+        oscillator.connect(volume);
 
         oscillator.start();
         oscillator.stop(endTime);
@@ -125,10 +144,15 @@ class Game{
     generate(){
         this.target = new Target();
         this.bullet = new Bullet();
+        this.bulletTrails = [];
     }
 
     render(ctxt){
         this.target.render(ctxt);
+
+        for(let bulletTrail of this.bulletTrails){
+            bulletTrail.render(ctxt);
+        }
 
         if(this.bullet !== null){
             this.bullet.render(ctxt);
@@ -144,6 +168,13 @@ class Game{
     update(){
         this.target.update();
 
+        for(let i=this.bulletTrails.length-1;i>=0;i--){
+            this.bulletTrails[i].update();
+            if(this.bulletTrails[i].isEmpty()){
+                this.bulletTrails.splice(i, 1);
+            }
+        }
+
         if(this.bullet === null){
             return;
         }
@@ -152,11 +183,15 @@ class Game{
         
         let [touches, valid] = this.target.touches(this.bullet);
         if(touches){
+            this.bulletTrails.push(new BulletFadingTrail(this.bullet));
+
             if(valid){
                 this.bullet = new Bullet();
+                audio.playGeneric();
             }else{
                 this.bullet = null;
-                document.getElementById("gameCompleted").checked = true;
+                audio.playLost();
+                document.getElementById("gameLost").checked = true;
             }
         }
 
@@ -167,13 +202,13 @@ class Game{
 }
 
 class Target{
-    constructor(x, y){
+    constructor(){
         this.x = 0.5;
         this.y = TARGET_POSITION;
 
         this.t = 0;
 
-        let rotators = [LinearRotator, ReverseLinearRotator, PeriodicRotator];
+        let rotators = [LinearRotator, ReverseLinearRotator, PeriodicRotator, VariableSpeedRotator, ReverseVariableSpeedRotator, ZigZagRotator, ReverseZigZagRotator];
         this.rotator = new rotators[Math.floor(Math.random() * rotators.length)]();
 
         this.points = [];
@@ -254,9 +289,20 @@ class Bullet{
         this.x = 0.5;
         this.y = BULLET_POSITION;
         this.ySpeed = 0;
+        this.history = [];
+        for(let i=0;i<10;i++){
+            this.history.push(this.y);
+        }
     }
 
     render(ctxt){
+        ctxt.fillStyle = "#09FA";
+        for(let i=0;i<this.history.length;i++){
+            ctxt.beginPath();
+            ctxt.arc(gameSize * this.x, gameSize * this.history[i], gameSize * BULLET_RADIUS * (i / this.history.length), 0, 2 * Math.PI);
+            ctxt.fill();
+        }
+
         ctxt.fillStyle = "#09F";
         ctxt.beginPath();
         ctxt.arc(gameSize * this.x, gameSize * this.y, gameSize * BULLET_RADIUS, 0, 2 * Math.PI);
@@ -265,6 +311,8 @@ class Bullet{
 
     update(){
         this.y += this.ySpeed;
+        this.history.push(this.y);
+        this.history.shift();
     }
 
     start(){
@@ -272,11 +320,35 @@ class Bullet{
     }
 }
 
+class BulletFadingTrail{
+    constructor(bullet){
+        this.x = bullet.x;
+        this.history = bullet.history;
+        this.fading = 1;
+    }
+
+    render(ctxt){
+        ctxt.fillStyle = "#09FA";
+        for(let i=0;i<this.history.length;i++){
+            ctxt.beginPath();
+            ctxt.arc(gameSize * this.x, gameSize * this.history[i], gameSize * BULLET_RADIUS * (i / this.history.length) * this.fading, 0, 2 * Math.PI);
+            ctxt.fill();
+        }
+    }
+
+    update(){
+        this.fading *= 0.9;
+    }
+
+    isEmpty(){
+        return this.fading <= 0.1;
+    }
+}
+
 class LinearRotator{
     constructor(){
         this.t = 0;
         this.d = 0.02 + 0.01 * Math.random();
-        console.log("linear")
     }
 
     update(){
@@ -292,7 +364,6 @@ class ReverseLinearRotator{
     constructor(){
         this.t = 0;
         this.d = 0.02 + 0.01 * Math.random();
-        console.log("reverse")
     }
 
     update(){
@@ -309,7 +380,6 @@ class PeriodicRotator{
         this.t = 0;
         this.d = 0.01 + 0.01 * Math.random();
         this.offset = 2 * Math.PI * Math.random();
-        console.log("periodic")
     }
 
     update(){
@@ -318,5 +388,73 @@ class PeriodicRotator{
 
     get(){
         return Math.PI * Math.sin(this.t) + this.offset;
+    }
+}
+
+class VariableSpeedRotator{
+    constructor(){
+        this.t = 0;
+        this.d = 0.01 + 0.01 * Math.random();
+        this.a = 0.05 + 0.05 * Math.random();
+    }
+
+    update(){
+        this.d += 0.05;
+        this.t += this.a * (Math.sin(this.d) + 1) / 2 + 0.01;
+    }
+
+    get(){
+        return this.t;
+    }
+}
+
+class ReverseVariableSpeedRotator{
+    constructor(){
+        this.t = 0;
+        this.d = 0.01 + 0.01 * Math.random();
+        this.a = 0.05 + 0.05 * Math.random();
+    }
+
+    update(){
+        this.d += 0.05;
+        this.t -= this.a * (Math.sin(this.d) + 1) / 2 + 0.01;
+    }
+
+    get(){
+        return this.t;
+    }
+}
+
+class ZigZagRotator{
+    constructor(){
+        this.t = 0;
+        this.d = 0.01 + 0.01 * Math.random();
+        this.a = 0.08 + 0.05 * Math.random();
+    }
+
+    update(){
+        this.d += 0.05;
+        this.t += this.a * (Math.sin(this.d) + 1) / 2 - 0.03;
+    }
+
+    get(){
+        return this.t;
+    }
+}
+
+class ReverseZigZagRotator{
+    constructor(){
+        this.t = 0;
+        this.d = 0.01 + 0.01 * Math.random();
+        this.a = 0.08 + 0.05 * Math.random();
+    }
+
+    update(){
+        this.d += 0.05;
+        this.t -= this.a * (Math.sin(this.d) + 1) / 2 - 0.03;
+    }
+
+    get(){
+        return this.t;
     }
 }

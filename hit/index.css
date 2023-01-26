@@ -32,7 +32,8 @@ canvas{
 }
 
 input[type="checkbox"],
-input[type="checkbox"]:not(:checked)~label{
+#gameCompleted:not(:checked)~label[for="gameCompleted"],
+#gameLost:not(:checked)~label[for="gameLost"]{
     display: none;
 }
 
