@@ -9,6 +9,15 @@
     --theme-color-3: #222;
 }
 
+@media (prefers-color-scheme: dark) {
+    :root{
+        --theme-color-0: #333;
+        --theme-color-1: #555;
+        --theme-color-2: #777;
+        --theme-color-3: #FFF;
+    }
+}
+
 *{
     box-sizing: border-box;
     color: var(--theme-color-3);
@@ -52,7 +61,7 @@ main{
     scrollbar-width: none;
     gap: 5px;
     background-color: var(--theme-color-1);
-    padding: 0 5px;
+    padding: 5px;
 }
 
 main::-webkit-scrollbar{
