@@ -205,6 +205,7 @@ class InputHandler{
 
 class Game{
     constructor(){
+        this.started = false;
         this.reset();
     }
 
@@ -219,11 +220,15 @@ class Game{
     }
 
     update(){
-        if(!gameOver.checked){
+        if(!gameOver.checked && this.started){
             this.ball.update();
             this.tower.handleBall(this.ball);
             this.renderOffsetY = Math.max(this.ball.y - RENDER_OFFSET, this.renderOffsetY);
         }
+    }
+
+    start(){
+        this.started = true;
     }
 
     reset(){

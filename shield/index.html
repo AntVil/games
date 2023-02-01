@@ -27,9 +27,11 @@
         <script defer src="./index.js"></script>
     </head>
     <body>
-        <input id="gameOver" type="checkbox" />
         <canvas id="canvas"></canvas>
         <span id="score"></span>
+        <input id="startScreen" type="checkbox" checked />
+        <label for="startScreen" onclick="audioHandler.context.resume();game.reset();">tap to start</label>
+        <input id="gameOver" type="checkbox" />
         <label for="gameOver" onclick="game.reset()">tap for new</label>
     </body>
 </html>

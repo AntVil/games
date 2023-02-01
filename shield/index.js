@@ -278,7 +278,13 @@ class Game{
             ReverseSpiralParticle,
             FastParticle
         ];
-        this.reset();
+
+        this.arc = new Arc();
+        this.core = new Core();
+
+        this.particles = [];
+
+        this.particleSpawnFrameCounter = NaN;
     }
 
     render(ctxt){

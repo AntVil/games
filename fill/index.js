@@ -43,12 +43,12 @@ window.onload = () => {
 
     setViewportSize();
 
+    audio = new AudioHandler();
+
     canvas.addEventListener("mousedown", (e) => {
         e.preventDefault();
 
-        if(audio === undefined){
-            audio = new AudioHandler();
-        }
+        audio.context.resume();
 
         mouseDown = true;
         
@@ -80,9 +80,7 @@ window.onload = () => {
     canvas.addEventListener("touchstart", (e) => {
         e.preventDefault();
 
-        if(audio === undefined){
-            audio = new AudioHandler();
-        }
+        audio.context.resume();
 
         let x = Math.floor(((e.touches[0].clientX - (canvas.width - gameSize) / 2) / gameSize) * MAP_SIZE);
         let y = Math.floor(((e.touches[0].clientY - (canvas.height - gameSize) / 2) / gameSize) * MAP_SIZE);
