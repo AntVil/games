@@ -1,10 +1,11 @@
 const FPS = 60;
-const RENDER_OFFSET = 0.2;
+const RENDER_OFFSET = 0.3;
 const TOWER_WIDTH = 0.15;
 const PADDLE_LENGTH = 0.2;
 const PADDLE_DISTORTION = 0.3;
 const PADDLE_HEIGHT = 0.02;
 const PADDLE_OFFSET = 0.25;
+const PADDLE_ROTATION_SPEED = 0.01;
 const BALL_PADDLE_OFFSET = 0.04;
 const BALL_RADIUS = 0.02;
 const BALL_GRAVITY = 0.00065;
@@ -214,14 +215,29 @@ class Game{
         ctxt.translate((canvas.width - gameWidth) / 2, (canvas.height - gameHeight) / 2 - this.renderOffsetY * gameHeight);
 
         this.tower.render(ctxt);
-        this.ball.render(ctxt);
+        if(this.started){
+            this.ball.render(ctxt);
+        }
 
         ctxt.restore();
+
+        if(this.started){
+            ctxt.fillStyle = "#FFF";
+            ctxt.textAlign = "center";
+            ctxt.textBaseline = "middle";
+            ctxt.font = `${gameWidth / 10}px arial`;
+            ctxt.fillText(
+                this.tower.score,
+                canvas.width / 2,
+                canvas.height / 15
+            );
+        }
     }
 
     update(){
         if(!gameOver.checked && this.started){
             this.ball.update();
+            this.tower.update();
             this.tower.handleBall(this.ball);
             this.renderOffsetY = Math.max(this.ball.y - RENDER_OFFSET, this.renderOffsetY);
         }
@@ -235,7 +251,7 @@ class Game{
         this.ball = new Ball();
         this.tower = new Tower();
 
-        this.renderOffsetY = 0;
+        this.renderOffsetY = -RENDER_OFFSET;
     }
 
     handleInput(dx){
@@ -310,11 +326,19 @@ class Tower{
         this.paddels[0].convertToStart();
 
         this.angle = 0;
+
+        this.score = 0;
     }
 
     render(ctxt){
         for(let i=this.paddels.length-1;i>=0;i--){
             this.paddels[i].render(ctxt, this.angle);
+        }
+    }
+
+    update(){
+        for(let paddel of this.paddels){
+            paddel.update();
         }
     }
 
@@ -330,16 +354,14 @@ class Tower{
             if(top === PADDLE_TYPE_GROUND){
                 audioHandler.playGeneric();
                 if(ball.getCombo() >= COMBO_BOOST_COUNT){
-                    this.paddels.shift();
-                    this.paddels.push(new Paddle(this.paddels[this.paddels.length-1].y + PADDLE_OFFSET));
+                    this.nextPaddle();
                 }
                 ball.bounceBack(paddle.y + BALL_PADDLE_OFFSET - BALL_RADIUS, -BALL_BOUCE_SPEED);
             }else if(top === PADDLE_TYPE_OBSTACLE){
                 if(ball.getCombo() >= COMBO_BOOST_COUNT){
                     audioHandler.playGeneric();
                     ball.bounceBack(paddle.y + BALL_PADDLE_OFFSET - BALL_RADIUS, -BALL_BOUCE_SPEED);
-                    this.paddels.shift();
-                    this.paddels.push(new Paddle(this.paddels[this.paddels.length-1].y + PADDLE_OFFSET));
+                    this.nextPaddle();
                 }else{
                     audioHandler.playLost();
                     gameOver.checked = true;
@@ -348,10 +370,15 @@ class Tower{
             }else if(top === PADDLE_TYPE_AIR){
                 audioHandler.playCombo(ball.getCombo());
                 ball.increaseCombo();
-                this.paddels.shift();
-                this.paddels.push(new Paddle(this.paddels[this.paddels.length-1].y + PADDLE_OFFSET));
+                this.nextPaddle();
             }
         }
+    }
+
+    nextPaddle(){
+        this.paddels.shift();
+        this.paddels.push(new Paddle(this.paddels[this.paddels.length-1].y + PADDLE_OFFSET));
+        this.score++;
     }
 }
 
@@ -376,6 +403,14 @@ class Paddle{
         this.parts[this.parts.length-1] = 0;
 
         this.angle = 2 * Math.PI * Math.random();
+        this.rotationSpeed = 0;
+        if(Math.random() < 0.2){
+            if(Math.random() < 0.5){
+                this.rotationSpeed = -PADDLE_ROTATION_SPEED;
+            }else{
+                this.rotationSpeed = PADDLE_ROTATION_SPEED;
+            }
+        }
     }
 
     render(ctxt, angleOffset){
@@ -476,6 +511,10 @@ class Paddle{
         }
     }
 
+    update(){
+        this.angle += this.rotationSpeed;
+    }
+
     getTop(angleOffset){
         return this.parts[(this.parts.length - Math.ceil(this.parts.length * normailzedAngle(angleOffset + this.angle) / (2 * Math.PI) - this.parts.length / 4)) % this.parts.length];
     }
@@ -487,6 +526,7 @@ class Paddle{
         }
         this.parts[0] = PADDLE_TYPE_AIR;
         this.parts[this.parts.length-1] = PADDLE_TYPE_AIR;
+        this.rotationSpeed = 0;
     }
 }
 
