@@ -77,8 +77,6 @@ window.onload = () => {
     canvas.addEventListener("mousedown", (e) => {
         e.preventDefault();
 
-        audioHandler.context.resume();
-
         inputHandler.start(e.clientX, e.clientY);
     });
 
@@ -98,8 +96,6 @@ window.onload = () => {
 
     canvas.addEventListener("touchstart", (e) => {
         e.preventDefault();
-
-        audioHandler.context.resume();
 
         inputHandler.start(e.touches[0].clientX, e.touches[0].clientY);
     });

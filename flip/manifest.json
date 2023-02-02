@@ -1,0 +1,23 @@
+{
+    "name": "flip",
+    "short_name": "flip",
+    "icons": [
+        {
+            "src": "../images/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "../images/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ],
+    "theme_color": "#EEEEEE",
+    "background_color": "#EEEEEE",
+    "display": "standalone",
+    "start_url": "/games/flip/",
+    "orientation": "portrait"
+}
