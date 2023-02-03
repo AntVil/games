@@ -1,6 +1,6 @@
 const FPS = 60;
 const RENDER_OFFSET = 0.2;
-const GRADIENT_LENGTH = 0.02;
+const MAX_MAP_WIDTH = 2.5;
 const MAP_DEVIATION = 2;
 const MAP_GAP = 3;
 const MAP_BORDER = 1;
@@ -21,7 +21,8 @@ let audioHandler;
 
 let gameOver;
 
-let gameSize;
+let gameWidth;
+let gameHeight;
 
 let game;
 
@@ -34,8 +35,9 @@ function setViewportSize(){
     document.documentElement.style.setProperty("--screen-width", `${window.innerWidth}px`);
     document.documentElement.style.setProperty("--screen-height", `${window.innerHeight}px`);
 
-    gameSize = Math.min(canvas.width, canvas.height);
-    tileSize = gameSize / MAP_SIZE;
+    gameHeight = Math.min(canvas.width, canvas.height);
+    gameWidth = Math.min(canvas.width, gameHeight * MAX_MAP_WIDTH);
+    tileSize = gameHeight / MAP_SIZE;
 }
 
 window.onresize = () => setViewportSize();
@@ -158,10 +160,10 @@ class Game{
 
     render(ctxt){
         ctxt.fillStyle = "#333";
-        ctxt.fillRect((canvas.width - gameSize) / 2, (canvas.height - gameSize) / 2, gameSize, gameSize);
+        ctxt.fillRect((canvas.width - gameWidth) / 2, (canvas.height - gameHeight) / 2, gameWidth, gameHeight);
 
         ctxt.save();
-        ctxt.translate((canvas.width - gameSize) / 2 - this.renderOffsetX * gameSize, (canvas.height - gameSize) / 2);
+        ctxt.translate((canvas.width - gameWidth) / 2 - this.renderOffsetX * gameHeight, (canvas.height - gameHeight) / 2);
 
         this.map.render(ctxt);
         this.ball.render(ctxt);
@@ -169,15 +171,15 @@ class Game{
         ctxt.restore();
 
         ctxt.fillStyle = "#EEE";
-        ctxt.fillRect(0, 0, (canvas.width - gameSize) / 2, canvas.height);
-        ctxt.fillRect(canvas.width - (canvas.width - gameSize) / 2, 0, (canvas.width - gameSize) / 2, canvas.height);
+        ctxt.fillRect(0, 0, (canvas.width - gameWidth) / 2, canvas.height);
+        ctxt.fillRect(canvas.width - (canvas.width - gameWidth) / 2, 0, (canvas.width - gameWidth) / 2, canvas.height);
 
         /*
         if(this.started){
             ctxt.fillStyle = "#FFF";
             ctxt.textAlign = "center";
             ctxt.textBaseline = "middle";
-            ctxt.font = `${gameSize / 10}px arial`;
+            ctxt.font = `${gameHeight / 10}px arial`;
             ctxt.fillText(
                 this.map.score,
                 canvas.width / 2,
@@ -223,7 +225,8 @@ class Ball{
         for(let i=0;i<10;i++){
             this.history.push([this.x, this.y]);
         }
-        this.onGround = false;
+        this.onTop = false;
+        this.onBottom = false;
         this.flipRequested = false;
     }
 
@@ -231,23 +234,24 @@ class Ball{
         ctxt.fillStyle = "#0DF9";
         for(let i=0;i<this.history.length;i++){
             ctxt.beginPath();
-            ctxt.arc(gameSize * this.history[i][0], gameSize * this.history[i][1], gameSize * BALL_RADIUS * i / this.history.length, 0, 2 * Math.PI);
+            ctxt.arc(gameHeight * this.history[i][0], gameHeight * this.history[i][1], gameHeight * BALL_RADIUS * i / this.history.length, 0, 2 * Math.PI);
             ctxt.fill();
         }
 
         ctxt.fillStyle = "#0DF";
         ctxt.beginPath();
-        ctxt.arc(gameSize * this.x, gameSize * this.y, gameSize * BALL_RADIUS, 0, 2 * Math.PI);
+        ctxt.arc(gameHeight * this.x, gameHeight * this.y, gameHeight * BALL_RADIUS, 0, 2 * Math.PI);
         ctxt.fill();
     }
 
     update(){
-        if(!this.onGround){
+        if(!this.onTop && !this.onBottom){
             this.dy = Math.max(Math.min(this.dy + this.gravity, BALL_MAX_Y_SPEED), -BALL_MAX_Y_SPEED);
         }else if(this.flipRequested > 0){
             this.gravity = -this.gravity;
             this.dy = Math.max(Math.min(this.dy + this.gravity, BALL_MAX_Y_SPEED), -BALL_MAX_Y_SPEED);
-            this.onGround = false;
+            this.onTop = false;
+            this.onBottom = false;
             this.flipRequested = 0;
         }
         
@@ -257,7 +261,6 @@ class Ball{
         this.history.shift();
         this.history.push([this.x, this.y]);
 
-        this.onGround = false;
         this.flipRequested--;
     }
 
@@ -271,7 +274,7 @@ class Map{
         this.x = 0;
         this.top = [];
         this.bottom = [];
-        for(let i=0;i<2 * MAP_SIZE;i++){
+        for(let i=0;i<MAX_MAP_WIDTH * MAP_SIZE + 2;i++){
             this.top.push(new MapVertex(i, MAP_BORDER + MAP_DEVIATION, false));
             this.bottom.push(new MapVertex(i, MAP_SIZE - MAP_BORDER - MAP_DEVIATION, false));
         }
@@ -341,10 +344,10 @@ class Map{
 
             m = (y2 - y1) / (x2 - x1);
             c = y1 - m * x1;
-            if(ball.y <= m * ball.x + c + BALL_RADIUS){
+            if(ball.y <= m * ball.x + c + BALL_RADIUS || ball.onTop){
                 ball.y = m * ball.x + c + BALL_RADIUS;
                 ball.dy = 0;
-                ball.onGround = true;
+                ball.onTop = true;
                 this.top[index].handleBall(ball);
             }
         }
@@ -357,10 +360,10 @@ class Map{
 
             m = (y2 - y1) / (x2 - x1);
             c = y1 - m * x1;
-            if(ball.y >= m * ball.x + c - BALL_RADIUS){
+            if(ball.y >= m * ball.x + c - BALL_RADIUS || ball.onBottom){
                 ball.y = m * ball.x + c - BALL_RADIUS;
                 ball.dy = 0;
-                ball.onGround = true;
+                ball.onBottom = true;
                 this.bottom[index].handleBall(ball);
             }
         }        
@@ -389,11 +392,11 @@ class Map{
         }
 
         ctxt.beginPath();
-        ctxt.moveTo(tileSize * this.bottom[0].x, gameSize);
+        ctxt.moveTo(tileSize * this.bottom[0].x, gameHeight);
         for(let vertex of this.bottom){
             vertex.lineTo(ctxt);
         }
-        ctxt.lineTo(tileSize * this.bottom[this.bottom.length-1].x, gameSize);
+        ctxt.lineTo(tileSize * this.bottom[this.bottom.length-1].x, gameHeight);
         ctxt.fill();
 
         for(let vertex of this.bottom){
@@ -431,7 +434,7 @@ class MapVertex{
             ctxt.strokeStyle = "#F00";
         }
 
-        ctxt.lineWidth = gameSize * 0.01;
+        ctxt.lineWidth = gameHeight * 0.01;
         ctxt.lineCap = "round";
         ctxt.beginPath();
         ctxt.moveTo(tileSize * (this.x + 1), tileSize * this.y);
