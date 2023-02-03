@@ -11,6 +11,9 @@ const BALL_MAX_Y_SPEED = 0.02;
 const BALL_INITIAL_X_SPEED = 0.01;
 const FLIP_REQUESTED_FRAMES = 10;
 
+const VERTEX_TYPE_FLIP = 0;
+const VERTEX_TYPE_HIT = 1;
+
 let canvas;
 let ctxt;
 
@@ -165,19 +168,10 @@ class Game{
 
         ctxt.restore();
 
-        /*
-        let gradientLeft = ctxt.createLinearGradient((canvas.width - gameSize) / 2, 0, (canvas.width - gameSize) / 2 + gameSize * GRADIENT_LENGTH, 0);
-        gradientLeft.addColorStop(0, "#EEE");
-        gradientLeft.addColorStop(1, "#EEE0");
-        ctxt.fillStyle = gradientLeft;
-        ctxt.fillRect(Math.floor((canvas.width - gameSize) / 2), 0, gameSize * GRADIENT_LENGTH, canvas.height);
+        ctxt.fillStyle = "#EEE";
+        ctxt.fillRect(0, 0, (canvas.width - gameSize) / 2, canvas.height);
+        ctxt.fillRect(canvas.width - (canvas.width - gameSize) / 2, 0, (canvas.width - gameSize) / 2, canvas.height);
 
-        let gradientRight = ctxt.createLinearGradient((canvas.width - gameSize) / 2 + gameSize - gameSize * GRADIENT_LENGTH, 0, (canvas.width - gameSize) / 2 + gameSize, 0);
-        gradientRight.addColorStop(0, "#EEE0");
-        gradientRight.addColorStop(1, "#EEE");
-        ctxt.fillStyle = gradientRight;
-        ctxt.fillRect(Math.ceil((canvas.width - gameSize) / 2 + gameSize - gameSize * GRADIENT_LENGTH), 0, gameSize * GRADIENT_LENGTH, canvas.height);
-*/
         /*
         if(this.started){
             ctxt.fillStyle = "#FFF";
@@ -278,8 +272,8 @@ class Map{
         this.top = [];
         this.bottom = [];
         for(let i=0;i<2 * MAP_SIZE;i++){
-            this.top.push(new MapVertex(i, MAP_BORDER + MAP_DEVIATION));
-            this.bottom.push(new MapVertex(i, MAP_SIZE - MAP_BORDER - MAP_DEVIATION));
+            this.top.push(new MapVertex(i, MAP_BORDER + MAP_DEVIATION, false));
+            this.bottom.push(new MapVertex(i, MAP_SIZE - MAP_BORDER - MAP_DEVIATION, false));
         }
     }
 
@@ -292,14 +286,21 @@ class Map{
                 this.top.push(
                     new MapVertex(
                         this.top[this.top.length-1].x + 1,
-                        this.top[this.top.length-1].y
+                        this.top[this.top.length-1].y,
+                        true
                     )
                 );
             }else{
+                let y = Math.max(MAP_BORDER, Math.min(MAP_BORDER + 2 * MAP_DEVIATION, this.top[this.top.length-1].y + Math.round(Math.random() * (2 * Math.random() - 1))));
+                if(this.top[this.top.length-1].y !== y){
+                    this.top[this.top.length-1].type = undefined;
+                }
+
                 this.top.push(
                     new MapVertex(
                         this.top[this.top.length-1].x + 1,
-                        Math.max(MAP_BORDER, Math.min(MAP_BORDER + 2 * MAP_DEVIATION, this.top[this.top.length-1].y + Math.round(Math.random() * (2 * Math.random() - 1))))
+                        y,
+                        true
                     )
                 );
             }
@@ -309,14 +310,21 @@ class Map{
                 this.bottom.push(
                     new MapVertex(
                         this.bottom[this.bottom.length-1].x + 1,
-                        this.bottom[this.bottom.length-1].y
+                        this.bottom[this.bottom.length-1].y,
+                        true
                     )
                 );
             }else{
+                let y = Math.max(MAP_SIZE - (MAP_BORDER + 2 * MAP_DEVIATION), Math.min(MAP_SIZE - MAP_BORDER, this.bottom[this.bottom.length-1].y + Math.round(Math.random() * (2 * Math.random() - 1))));
+                if(this.bottom[this.bottom.length-1].y !== y){
+                    this.bottom[this.bottom.length-1].type = undefined;
+                }
+
                 this.bottom.push(
                     new MapVertex(
                         this.bottom[this.bottom.length-1].x + 1,
-                        Math.max(MAP_SIZE - (MAP_BORDER + 2 * MAP_DEVIATION), Math.min(MAP_SIZE - MAP_BORDER, this.bottom[this.bottom.length-1].y + Math.round(Math.random() * (2 * Math.random() - 1))))
+                        y,
+                        true
                     )
                 );
             }
@@ -337,6 +345,7 @@ class Map{
                 ball.y = m * ball.x + c + BALL_RADIUS;
                 ball.dy = 0;
                 ball.onGround = true;
+                this.top[index].handleBall(ball);
             }
         }
         
@@ -352,8 +361,9 @@ class Map{
                 ball.y = m * ball.x + c - BALL_RADIUS;
                 ball.dy = 0;
                 ball.onGround = true;
+                this.bottom[index].handleBall(ball);
             }
-        }
+        }        
     }
 
     getIndex(x){
@@ -369,28 +379,73 @@ class Map{
         ctxt.beginPath();
         ctxt.moveTo(tileSize * this.top[0].x, 0);
         for(let vertex of this.top){
-            vertex.render(ctxt);
+            vertex.lineTo(ctxt);
         }
         ctxt.lineTo(tileSize * this.top[this.top.length-1].x, 0);
         ctxt.fill();
 
+        for(let vertex of this.top){
+            vertex.render(ctxt);
+        }
+
         ctxt.beginPath();
         ctxt.moveTo(tileSize * this.bottom[0].x, gameSize);
         for(let vertex of this.bottom){
-            vertex.render(ctxt);
+            vertex.lineTo(ctxt);
         }
         ctxt.lineTo(tileSize * this.bottom[this.bottom.length-1].x, gameSize);
         ctxt.fill();
+
+        for(let vertex of this.bottom){
+            vertex.render(ctxt);
+        }
     }
 }
 
 class MapVertex{
-    constructor(x, y){
+    constructor(x, y, typeAllowed){
         this.x = x;
         this.y = y;
+
+        this.type = undefined;
+        if(typeAllowed){
+            let chance = Math.random();
+            if(chance < 0.1){
+                this.type = VERTEX_TYPE_FLIP;
+            }else if(chance < 0.5){
+                this.type = VERTEX_TYPE_HIT;
+            }
+        }
+    }
+
+    lineTo(ctxt){
+        ctxt.lineTo(tileSize * this.x, tileSize * this.y);
     }
 
     render(ctxt){
+        if(this.type === undefined){
+            return;
+        }else if(this.type === VERTEX_TYPE_FLIP){
+            ctxt.strokeStyle = "#09F";
+        }else if(this.type === VERTEX_TYPE_HIT){
+            ctxt.strokeStyle = "#F00";
+        }
+
+        ctxt.lineWidth = gameSize * 0.01;
+        ctxt.lineCap = "round";
+        ctxt.beginPath();
+        ctxt.moveTo(tileSize * (this.x + 1), tileSize * this.y);
         ctxt.lineTo(tileSize * this.x, tileSize * this.y);
+        ctxt.stroke();
+    }
+
+    handleBall(ball){
+        if(this.type === undefined){
+            return;
+        }else if(this.type === VERTEX_TYPE_FLIP){
+            ball.flip();
+        }else if(this.type === VERTEX_TYPE_HIT){
+            gameOver.checked = true;
+        }
     }
 }

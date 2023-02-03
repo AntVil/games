@@ -34,7 +34,7 @@ canvas{
 }
 
 input[type="checkbox"],
-input[type="checkbox"]:not(:checked)~label{
+input[type="checkbox"]:not(:checked)+label{
     display: none;
 }
 
