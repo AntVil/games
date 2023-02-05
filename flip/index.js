@@ -7,12 +7,12 @@ const MAP_BORDER = 1;
 const MAP_SIZE = 2 * MAP_BORDER + 4 * MAP_DEVIATION + MAP_GAP;
 const BALL_RADIUS = 0.02;
 const BALL_GRAVITY = 0.0065;
-const BALL_MAX_Y_SPEED = 0.02;
+const BALL_MAX_Y_SPEED = 0.03;
 const BALL_INITIAL_X_SPEED = 0.01;
 const FLIP_REQUESTED_FRAMES = 10;
 
-const VERTEX_TYPE_FLIP = 0;
-const VERTEX_TYPE_HIT = 1;
+const VERTEX_FLIP = 0;
+const VERTEX_HIT = 1;
 
 let canvas;
 let ctxt;
@@ -98,24 +98,7 @@ class AudioHandler{
         this.context = new AudioContext();
     }
 
-    playCombo(combo){
-        let endTime = this.context.currentTime + 0.15;
-
-        let volume = this.context.createGain();
-        volume.connect(this.context.destination);
-        volume.gain.setValueAtTime(1, this.context.currentTime);
-        volume.gain.linearRampToValueAtTime(0, endTime);
-
-        let oscillator = this.context.createOscillator();
-        oscillator.type = "sine";
-        oscillator.frequency.setValueAtTime(440 * Math.pow(2, combo / 12), this.context.currentTime);
-        oscillator.connect(volume);
-
-        oscillator.start();
-        oscillator.stop(endTime);
-    }
-
-    playGeneric(){
+    playOnGround(){
         let endTime = this.context.currentTime + 0.1;
 
         let volume = this.context.createGain();
@@ -125,7 +108,7 @@ class AudioHandler{
 
         let oscillator = this.context.createOscillator();
         oscillator.type = "sine";
-        oscillator.frequency.setValueAtTime(440, this.context.currentTime);
+        oscillator.frequency.setValueAtTime(220, this.context.currentTime);
         oscillator.connect(volume);
 
         oscillator.start();
@@ -142,9 +125,9 @@ class AudioHandler{
 
         let oscillator = this.context.createOscillator();
         oscillator.type = "sine";
-        oscillator.frequency.setValueAtTime(659.26, this.context.currentTime);
-        oscillator.frequency.setValueAtTime(587.33, this.context.currentTime + 0.1);
-        oscillator.frequency.setValueAtTime(523.25, this.context.currentTime + 0.2);
+        oscillator.frequency.setValueAtTime(329.63, this.context.currentTime);
+        oscillator.frequency.setValueAtTime(293.67, this.context.currentTime + 0.1);
+        oscillator.frequency.setValueAtTime(261.63, this.context.currentTime + 0.2);
         oscillator.connect(volume);
 
         oscillator.start();
@@ -174,19 +157,17 @@ class Game{
         ctxt.fillRect(0, 0, (canvas.width - gameWidth) / 2, canvas.height);
         ctxt.fillRect(canvas.width - (canvas.width - gameWidth) / 2, 0, (canvas.width - gameWidth) / 2, canvas.height);
 
-        /*
         if(this.started){
-            ctxt.fillStyle = "#FFF";
-            ctxt.textAlign = "center";
+            ctxt.fillStyle = "#333";
+            ctxt.textAlign = "right";
             ctxt.textBaseline = "middle";
-            ctxt.font = `${gameHeight / 10}px arial`;
+            ctxt.font = `${gameHeight / (2 * MAP_SIZE)}px arial`;
             ctxt.fillText(
-                this.map.score,
-                canvas.width / 2,
-                canvas.height / 15
+                (this.ball.x * 10).toFixed(1),
+                canvas.width - (gameHeight / (2 * MAP_SIZE)),
+                (canvas.height - gameHeight) / 2 + gameHeight / (2 * MAP_SIZE)
             );
         }
-        */
     }
 
     update(){
@@ -220,6 +201,7 @@ class Ball{
         this.y = 0.5;
         this.dx = BALL_INITIAL_X_SPEED;
         this.dy = 0;
+        this.t = 0;
         this.gravity = BALL_GRAVITY;
         this.history = [];
         for(let i=0;i<10;i++){
@@ -245,6 +227,9 @@ class Ball{
     }
 
     update(){
+        this.history.shift();
+        this.history.push([this.x, this.y]);
+
         if(!this.onTop && !this.onBottom){
             this.dy = Math.max(Math.min(this.dy + this.gravity, BALL_MAX_Y_SPEED), -BALL_MAX_Y_SPEED);
         }else if(this.flipRequested > 0){
@@ -254,13 +239,12 @@ class Ball{
             this.onBottom = false;
             this.flipRequested = 0;
         }
-        
-        this.x += this.dx;
-        this.y += this.dy;
-        
-        this.history.shift();
-        this.history.push([this.x, this.y]);
 
+        let speed = 1 + Math.log(1 + 0.0005 * this.t);
+        this.x += this.dx * speed;
+        this.y += this.dy * speed;
+        this.t++;
+        
         this.flipRequested--;
     }
 
@@ -275,9 +259,11 @@ class Map{
         this.top = [];
         this.bottom = [];
         for(let i=0;i<MAX_MAP_WIDTH * MAP_SIZE + 2;i++){
-            this.top.push(new MapVertex(i, MAP_BORDER + MAP_DEVIATION, false));
-            this.bottom.push(new MapVertex(i, MAP_SIZE - MAP_BORDER - MAP_DEVIATION, false));
+            this.top.push(new MapVertex(i, MAP_BORDER + MAP_DEVIATION, undefined));
+            this.bottom.push(new MapVertex(i, MAP_SIZE - MAP_BORDER - MAP_DEVIATION, undefined));
         }
+        this.patterns = [PatternA, PatternB, PatternC, PatternD, PatternE, PatternF];
+        this.pattern = new this.patterns[Math.floor(Math.random() * this.patterns.length)]();
     }
 
     update(ball){
@@ -290,7 +276,7 @@ class Map{
                     new MapVertex(
                         this.top[this.top.length-1].x + 1,
                         this.top[this.top.length-1].y,
-                        true
+                        this.pattern.getTop()
                     )
                 );
             }else{
@@ -303,7 +289,7 @@ class Map{
                     new MapVertex(
                         this.top[this.top.length-1].x + 1,
                         y,
-                        true
+                        this.pattern.getTop()
                     )
                 );
             }
@@ -314,7 +300,7 @@ class Map{
                     new MapVertex(
                         this.bottom[this.bottom.length-1].x + 1,
                         this.bottom[this.bottom.length-1].y,
-                        true
+                        this.pattern.getBottom()
                     )
                 );
             }else{
@@ -327,10 +313,14 @@ class Map{
                     new MapVertex(
                         this.bottom[this.bottom.length-1].x + 1,
                         y,
-                        true
+                        this.pattern.getBottom()
                     )
                 );
             }
+        }
+
+        if(this.pattern.isEmpty()){
+            this.pattern = new this.patterns[Math.floor(Math.random() * this.patterns.length)]();
         }
 
         let index = this.getIndex(ball.x);
@@ -345,10 +335,15 @@ class Map{
             m = (y2 - y1) / (x2 - x1);
             c = y1 - m * x1;
             if(ball.y <= m * ball.x + c + BALL_RADIUS || ball.onTop){
+                this.top[index].handleBall(ball);
+
+                if(!ball.onTop && !gameOver.checked){
+                    audioHandler.playOnGround();
+                }
+
                 ball.y = m * ball.x + c + BALL_RADIUS;
                 ball.dy = 0;
                 ball.onTop = true;
-                this.top[index].handleBall(ball);
             }
         }
         
@@ -361,10 +356,15 @@ class Map{
             m = (y2 - y1) / (x2 - x1);
             c = y1 - m * x1;
             if(ball.y >= m * ball.x + c - BALL_RADIUS || ball.onBottom){
+                this.bottom[index].handleBall(ball);
+                
+                if(!ball.onBottom && !gameOver.checked){
+                    audioHandler.playOnGround();
+                }
+
                 ball.y = m * ball.x + c - BALL_RADIUS;
                 ball.dy = 0;
                 ball.onBottom = true;
-                this.bottom[index].handleBall(ball);
             }
         }        
     }
@@ -406,19 +406,10 @@ class Map{
 }
 
 class MapVertex{
-    constructor(x, y, typeAllowed){
+    constructor(x, y, type){
         this.x = x;
         this.y = y;
-
-        this.type = undefined;
-        if(typeAllowed){
-            let chance = Math.random();
-            if(chance < 0.1){
-                this.type = VERTEX_TYPE_FLIP;
-            }else if(chance < 0.5){
-                this.type = VERTEX_TYPE_HIT;
-            }
-        }
+        this.type = type;
     }
 
     lineTo(ctxt){
@@ -428,9 +419,9 @@ class MapVertex{
     render(ctxt){
         if(this.type === undefined){
             return;
-        }else if(this.type === VERTEX_TYPE_FLIP){
+        }else if(this.type === VERTEX_FLIP){
             ctxt.strokeStyle = "#09F";
-        }else if(this.type === VERTEX_TYPE_HIT){
+        }else if(this.type === VERTEX_HIT){
             ctxt.strokeStyle = "#F00";
         }
 
@@ -445,10 +436,89 @@ class MapVertex{
     handleBall(ball){
         if(this.type === undefined){
             return;
-        }else if(this.type === VERTEX_TYPE_FLIP){
+        }else if(this.type === VERTEX_FLIP){
             ball.flip();
-        }else if(this.type === VERTEX_TYPE_HIT){
+        }else if(this.type === VERTEX_HIT){
+            audioHandler.playLost();
             gameOver.checked = true;
         }
+    }
+}
+
+class Pattern{
+    constructor(a, b){
+        if(Math.random() < 0.5){
+            this.top = a;
+            this.bottom = b;
+        }else{
+            this.top = b;
+            this.bottom = a;
+        }
+    }
+
+    getTop(){
+        return this.top.shift();
+    }
+    
+    getBottom(){
+        return this.bottom.shift();
+    }
+
+    isEmpty(){
+        return this.top.length === 0 && this.bottom.length === 0;
+    }
+}
+
+class PatternA extends Pattern{
+    constructor(){
+        super(
+            [undefined, undefined, undefined, undefined],
+            [undefined, undefined, undefined, undefined]
+        );
+    }
+}
+
+class PatternB extends Pattern{
+    constructor(){
+        super(
+            [undefined, undefined, undefined, undefined, undefined, undefined],
+            [undefined, undefined, VERTEX_HIT, VERTEX_HIT, undefined, undefined]
+        );
+    }
+}
+
+class PatternC extends Pattern{
+    constructor(){
+        super(
+            [undefined, undefined, undefined, undefined, undefined, VERTEX_FLIP, undefined, undefined, undefined, undefined],
+            [undefined, VERTEX_HIT, VERTEX_HIT, undefined, undefined, undefined, undefined, undefined, VERTEX_HIT, VERTEX_HIT]
+        );
+    }
+}
+
+class PatternD extends Pattern{
+    constructor(){
+        super(
+            [undefined, undefined, undefined, undefined, VERTEX_FLIP, VERTEX_HIT, VERTEX_HIT, VERTEX_HIT, VERTEX_HIT],
+            [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined]
+        );
+    }
+}
+
+class PatternE extends Pattern{
+    constructor(){
+        super(
+            [undefined, undefined, undefined, undefined, VERTEX_HIT, undefined, undefined, undefined, undefined, undefined, undefined],
+            [undefined, undefined, undefined, undefined, undefined, undefined, VERTEX_HIT, undefined, undefined, undefined, undefined]
+        );
+    }
+}
+
+class PatternF extends Pattern{
+    constructor(){
+        super(
+            [undefined, undefined, undefined, undefined, VERTEX_FLIP, undefined, undefined, undefined, undefined],
+            [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined]
+        );
     }
 }
