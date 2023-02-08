@@ -10,6 +10,11 @@ const BALL_GRAVITY = 0.0065;
 const BALL_MAX_Y_SPEED = 0.03;
 const BALL_INITIAL_X_SPEED = 0.01;
 const FLIP_REQUESTED_FRAMES = 10;
+const VERTEX_BACKGROUND_OFFSET_X = 0.3;
+const VERTEX_BACKGROUND_OFFSET_Y = 0.5;
+const VERTEX_TYPE_OFFSET_X = VERTEX_BACKGROUND_OFFSET_X * 0.2;
+const VERTEX_TYPE_OFFSET_Y = VERTEX_BACKGROUND_OFFSET_Y * 0.2;
+const SHADOW_LENGTH = 0.005;
 
 const VERTEX_FLIP = 0;
 const VERTEX_HIT = 1;
@@ -213,17 +218,86 @@ class Ball{
     }
 
     render(ctxt){
-        ctxt.fillStyle = "#0DF9";
+        if(this.onBottom){
+            ctxt.fillStyle = "#0006";
+            ctxt.beginPath();
+            ctxt.ellipse(
+                gameHeight * this.x,
+                gameHeight * (this.y + BALL_RADIUS),
+                gameHeight * BALL_RADIUS,
+                gameHeight * BALL_RADIUS * VERTEX_BACKGROUND_OFFSET_Y,
+                0,
+                0,
+                2 * Math.PI
+            );
+            ctxt.fill();
+        }else if(this.onTop){
+            ctxt.fillStyle = "#0006";
+            ctxt.beginPath();
+            ctxt.ellipse(
+                gameHeight * this.x,
+                gameHeight * (this.y - BALL_RADIUS),
+                gameHeight * BALL_RADIUS,
+                gameHeight * BALL_RADIUS * VERTEX_BACKGROUND_OFFSET_Y,
+                0,
+                0,
+                2 * Math.PI
+            );
+            ctxt.fill();
+        }
+
+        ctxt.fillStyle = "#0CF9";
         for(let i=0;i<this.history.length;i++){
             ctxt.beginPath();
             ctxt.arc(gameHeight * this.history[i][0], gameHeight * this.history[i][1], gameHeight * BALL_RADIUS * i / this.history.length, 0, 2 * Math.PI);
             ctxt.fill();
         }
 
-        ctxt.fillStyle = "#0DF";
+        ctxt.fillStyle = "#0CF";
         ctxt.beginPath();
         ctxt.arc(gameHeight * this.x, gameHeight * this.y, gameHeight * BALL_RADIUS, 0, 2 * Math.PI);
         ctxt.fill();
+
+        if(this.dy >= 0 && !this.onTop){
+            ctxt.fillStyle = "#0006";
+            
+            ctxt.beginPath();
+            ctxt.arc(
+                gameHeight * this.x,
+                gameHeight * this.y,
+                gameHeight * BALL_RADIUS,
+                0,
+                Math.PI
+            );
+            ctxt.arc(
+                gameHeight * this.x,
+                gameHeight * (this.y - SHADOW_LENGTH),
+                gameHeight * BALL_RADIUS,
+                Math.PI,
+                0,
+                true
+            );
+            ctxt.fill();
+        }else{
+            ctxt.fillStyle = "#0006"
+            ctxt.beginPath();
+            ctxt.arc(
+                gameHeight * this.x,
+                gameHeight * (this.y + SHADOW_LENGTH),
+                gameHeight * BALL_RADIUS,
+                0,
+                Math.PI,
+                true
+            );
+            ctxt.arc(
+                gameHeight * this.x,
+                gameHeight * this.y,
+                gameHeight * BALL_RADIUS,
+                Math.PI,
+                0
+            );
+            ctxt.fill();
+        }
     }
 
     update(){
@@ -264,6 +338,7 @@ class Map{
         }
         this.patterns = [PatternA, PatternB, PatternC, PatternD, PatternE, PatternF];
         this.pattern = new this.patterns[Math.floor(Math.random() * this.patterns.length)]();
+        this.startTime = Date.now();
     }
 
     update(ball){
@@ -378,29 +453,46 @@ class Map{
     }
 
     render(ctxt){
-        ctxt.fillStyle = "#EEE";
+        ctxt.fillStyle = "#AAA";
         ctxt.beginPath();
         ctxt.moveTo(tileSize * this.top[0].x, 0);
         for(let vertex of this.top){
-            vertex.lineTo(ctxt);
+            vertex.lineTo(ctxt, -VERTEX_BACKGROUND_OFFSET_X / 2, VERTEX_BACKGROUND_OFFSET_Y / 2);
         }
         ctxt.lineTo(tileSize * this.top[this.top.length-1].x, 0);
         ctxt.fill();
 
-        for(let vertex of this.top){
-            vertex.render(ctxt);
+        ctxt.beginPath();
+        ctxt.moveTo(tileSize * this.bottom[0].x, gameHeight);
+        for(let vertex of this.bottom){
+            vertex.lineTo(ctxt, -VERTEX_BACKGROUND_OFFSET_X / 2, -VERTEX_BACKGROUND_OFFSET_Y / 2);
         }
+        ctxt.lineTo(tileSize * this.bottom[this.bottom.length-1].x, gameHeight);
+        ctxt.fill();
+        
+        ctxt.fillStyle = "#EEE";
+        ctxt.beginPath();
+        ctxt.moveTo(tileSize * this.top[0].x, 0);
+        for(let vertex of this.top){
+            vertex.lineTo(ctxt, VERTEX_BACKGROUND_OFFSET_X / 2, -VERTEX_BACKGROUND_OFFSET_Y / 2);
+        }
+        ctxt.lineTo(tileSize * this.top[this.top.length-1].x, 0);
+        ctxt.fill();
 
         ctxt.beginPath();
         ctxt.moveTo(tileSize * this.bottom[0].x, gameHeight);
         for(let vertex of this.bottom){
-            vertex.lineTo(ctxt);
+            vertex.lineTo(ctxt, VERTEX_BACKGROUND_OFFSET_X / 2, VERTEX_BACKGROUND_OFFSET_Y / 2);
         }
         ctxt.lineTo(tileSize * this.bottom[this.bottom.length-1].x, gameHeight);
         ctxt.fill();
 
-        for(let vertex of this.bottom){
-            vertex.render(ctxt);
+        for(let i=this.top.length-1;i>=0;i--){
+            this.top[i].render(ctxt, -VERTEX_BACKGROUND_OFFSET_X / 2, VERTEX_BACKGROUND_OFFSET_Y / 2, VERTEX_BACKGROUND_OFFSET_X / 2, -VERTEX_BACKGROUND_OFFSET_Y / 2, VERTEX_TYPE_OFFSET_X, VERTEX_TYPE_OFFSET_Y);
+        }
+
+        for(let i=this.bottom.length-1;i>=0;i--){
+            this.bottom[i].render(ctxt, -VERTEX_BACKGROUND_OFFSET_X / 2, -VERTEX_BACKGROUND_OFFSET_Y / 2, VERTEX_BACKGROUND_OFFSET_X / 2, VERTEX_BACKGROUND_OFFSET_Y / 2, VERTEX_TYPE_OFFSET_X, -VERTEX_TYPE_OFFSET_Y);
         }
     }
 }
@@ -412,25 +504,62 @@ class MapVertex{
         this.type = type;
     }
 
-    lineTo(ctxt){
-        ctxt.lineTo(tileSize * this.x, tileSize * this.y);
+    lineTo(ctxt, offsetX, offsetY){
+        ctxt.lineTo(tileSize * (this.x + offsetX), tileSize * (this.y + offsetY));
     }
 
-    render(ctxt){
+    render(ctxt, offsetX1, offsetY1, offsetX2, offsetY2, padX, padY){
+        let color1;
+        let color2;
         if(this.type === undefined){
             return;
         }else if(this.type === VERTEX_FLIP){
-            ctxt.strokeStyle = "#09F";
+            color1 = "#09F";
+            color2 = "#0AF";
         }else if(this.type === VERTEX_HIT){
-            ctxt.strokeStyle = "#F00";
+            color1 = "#A00";
+            color2 = "#F00";
         }
 
-        ctxt.lineWidth = gameHeight * 0.01;
-        ctxt.lineCap = "round";
+        let a1x = tileSize * (this.x + 1 + offsetX1);
+        let a2x = tileSize * (this.x + 1 + offsetX2);
+        let a3x = tileSize * (this.x + offsetX2);
+        let a4x = tileSize * (this.x + offsetX1);
+        let b1x = tileSize * (this.x + 1 + offsetX1 + padX);
+        let b2x = tileSize * (this.x + 1 + offsetX2 + padX);
+        let b3x = tileSize * (this.x + offsetX2 + padX);
+        let b4x = tileSize * (this.x + offsetX1 + padX);
+        let a1y = tileSize * (this.y + offsetY1);
+        let a2y = tileSize * (this.y + offsetY2);
+        let a3y = tileSize * (this.y + offsetY2);
+        let a4y = tileSize * (this.y + offsetY1);
+        let b1y = tileSize * (this.y + offsetY1 + padY);
+        let b2y = tileSize * (this.y + offsetY2 + padY);
+        let b3y = tileSize * (this.y + offsetY2 + padY);
+        let b4y = tileSize * (this.y + offsetY1 + padY);
+
+        ctxt.fillStyle = color1;
         ctxt.beginPath();
-        ctxt.moveTo(tileSize * (this.x + 1), tileSize * this.y);
-        ctxt.lineTo(tileSize * this.x, tileSize * this.y);
-        ctxt.stroke();
+        ctxt.moveTo(a3x, a3y);
+        ctxt.lineTo(a2x, a2y);
+        ctxt.lineTo(b2x, b2y);
+        ctxt.lineTo(b3x, b3y);
+        ctxt.fill();
+
+        ctxt.beginPath();
+        ctxt.moveTo(a3x, a3y);
+        ctxt.lineTo(a4x, a4y);
+        ctxt.lineTo(b4x, b4y);
+        ctxt.lineTo(b3x, b3y);
+        ctxt.fill();
+        
+        ctxt.fillStyle = color2;
+        ctxt.beginPath();
+        ctxt.moveTo(b1x, b1y);
+        ctxt.lineTo(b2x, b2y);
+        ctxt.lineTo(b3x, b3y);
+        ctxt.lineTo(b4x, b4y);
+        ctxt.fill();
     }
 
     handleBall(ball){
